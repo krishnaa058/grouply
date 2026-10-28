@@ -6,7 +6,7 @@ services:
     plan: free
     region: oregon
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && gunicorn app:app
+    startCommand: cd backend && gunicorn --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -20,8 +20,6 @@ services:
         value: asymmetric
       - key: FLASK_SECRET_KEY
         generateValue: true
-      - key: PORT
-        value: 5000
 
   # ── Frontend: Static Site ───────────────────────────────────
   - type: web
