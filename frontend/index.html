@@ -184,37 +184,29 @@
 
           <!-- Category Tiles (Pinterest style cards, zero emojis) -->
           <div class="explore-grid" id="explore-grid" style="margin-bottom:var(--space-6)">
-            <div class="category-tile" data-category="travel" style="background:linear-gradient(135deg,#1e3a5f,#2d6a4f)">
-              <span class="icon-wrap tile-icon" data-icon="compass"></span>
-              <span class="tile-name">Travel</span>
+            <div class="category-tile" data-category="friends" style="background:linear-gradient(135deg,#2563eb,#3b82f6)">
+              <span class="icon-wrap tile-icon" data-icon="users"></span>
+              <span class="tile-name">Friends</span>
             </div>
-            <div class="category-tile" data-category="sports" style="background:linear-gradient(135deg,#7f1d1d,#b45309)">
+            <div class="category-tile" data-category="college_friends" style="background:linear-gradient(135deg,#7c3aed,#9333ea)">
               <span class="icon-wrap tile-icon" data-icon="award"></span>
-              <span class="tile-name">Sports</span>
+              <span class="tile-name">College Friends</span>
             </div>
-            <div class="category-tile" data-category="music" style="background:linear-gradient(135deg,#4c1d95,#6d28d9)">
-              <span class="icon-wrap tile-icon" data-icon="music"></span>
-              <span class="tile-name">Music</span>
+            <div class="category-tile" data-category="trip" style="background:linear-gradient(135deg,#059669,#10b981)">
+              <span class="icon-wrap tile-icon" data-icon="compass"></span>
+              <span class="tile-name">Trip</span>
             </div>
-            <div class="category-tile" data-category="food" style="background:linear-gradient(135deg,#78350f,#dc2626)">
-              <span class="icon-wrap tile-icon" data-icon="coffee"></span>
-              <span class="tile-name">Food</span>
+            <div class="category-tile" data-category="kitty_party" style="background:linear-gradient(135deg,#db2777,#f43f5e)">
+              <span class="icon-wrap tile-icon" data-icon="sparkles"></span>
+              <span class="tile-name">Kitty Party</span>
             </div>
-            <div class="category-tile" data-category="gaming" style="background:linear-gradient(135deg,#064e3b,#065f46)">
-              <span class="icon-wrap tile-icon" data-icon="gamepad"></span>
-              <span class="tile-name">Gaming</span>
+            <div class="category-tile" data-category="old_friends" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
+              <span class="icon-wrap tile-icon" data-icon="clock"></span>
+              <span class="tile-name">Old Friends</span>
             </div>
-            <div class="category-tile" data-category="art" style="background:linear-gradient(135deg,#831843,#9d174d)">
-              <span class="icon-wrap tile-icon" data-icon="image"></span>
-              <span class="tile-name">Art</span>
-            </div>
-            <div class="category-tile" data-category="outdoors" style="background:linear-gradient(135deg,#1e3a2f,#166534)">
-              <span class="icon-wrap tile-icon" data-icon="sun"></span>
-              <span class="tile-name">Outdoors</span>
-            </div>
-            <div class="category-tile" data-category="tech" style="background:linear-gradient(135deg,#172554,#1e40af)">
-              <span class="icon-wrap tile-icon" data-icon="code"></span>
-              <span class="tile-name">Tech</span>
+            <div class="category-tile" data-category="other" style="background:linear-gradient(135deg,#475569,#64748b)">
+              <span class="icon-wrap tile-icon" data-icon="users"></span>
+              <span class="tile-name">Other</span>
             </div>
           </div>
 
@@ -630,19 +622,32 @@
       </div>
 
       <div class="input-group">
-        <label for="cg-category">Category</label>
-        <select id="cg-category" class="input" style="cursor:pointer">
+        <label for="cg-category">Category <span style="color:var(--danger)">*</span></label>
+        <select id="cg-category" class="input" style="cursor:pointer" required>
           <option value="">Select Category...</option>
-          <option value="travel">Travel</option>
-          <option value="sports">Sports</option>
-          <option value="music">Music</option>
-          <option value="food">Food</option>
-          <option value="gaming">Gaming</option>
-          <option value="art">Art</option>
-          <option value="outdoors">Outdoors</option>
-          <option value="tech">Tech</option>
-          <option value="other">Other</option>
+          <option value="friends">Friends</option>
+          <option value="college_friends">College Friends</option>
+          <option value="trip">Trip</option>
+          <option value="kitty_party">Kitty Party</option>
+          <option value="old_friends">Old Friends</option>
+          <option value="other">Other...</option>
         </select>
+      </div>
+
+      <!-- Custom Category Name (shown when 'other' is selected) -->
+      <div class="input-group hidden" id="cg-custom-category-group">
+        <label for="cg-custom-category">Custom Category Name <span style="color:var(--danger)">*</span></label>
+        <input id="cg-custom-category" type="text" class="input" placeholder="e.g. Hiking Club, Family, Book Circle" maxlength="40" />
+      </div>
+
+      <!-- Google Drive Folder Link (Required for Group Media) -->
+      <div class="input-group">
+        <label for="cg-drive-link">Google Drive Folder Link <span style="color:var(--danger)">*</span></label>
+        <input id="cg-drive-link" type="url" class="input" placeholder="https://drive.google.com/drive/folders/..." required />
+        <span style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;display:block">
+          Connect your Google Drive folder for storing and sharing full-resolution photos, videos, and group documents.
+        </span>
+        <span class="form-error" id="cg-drive-err"></span>
       </div>
 
       <div class="toggle-row">
@@ -939,9 +944,26 @@
         <textarea id="ep-bio" class="input" placeholder="Tell your groups a bit about you" rows="2" maxlength="160" style="resize:vertical;min-height:56px"></textarea>
       </div>
 
-      <div class="input-group">
-        <label for="ep-avatar-url">Avatar URL (optional)</label>
-        <input id="ep-avatar-url" type="url" class="input" placeholder="https://example.com/avatar.jpg" />
+      <!-- Instagram-style Photo Picker -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);margin-bottom:var(--space-4);padding-top:var(--space-2)">
+        <div style="position:relative;cursor:pointer" id="ep-avatar-picker-trigger" title="Click to choose a photo">
+          <div class="avatar avatar-xl" id="ep-avatar-preview" style="background:var(--accent-subtle);color:var(--brand-accent);font-size:2rem;font-weight:700;border:3px solid var(--border-color);width:96px;height:96px">
+            ?
+          </div>
+          <div style="position:absolute;bottom:2px;right:2px;width:28px;height:28px;border-radius:50%;background:var(--brand);color:#ffffff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);border:2px solid var(--bg-surface)">
+            <span class="icon-wrap" data-icon="edit"></span>
+          </div>
+        </div>
+        <input type="file" id="ep-avatar-file" accept="image/*" style="display:none" />
+        <input type="hidden" id="ep-avatar-data" />
+        <div style="display:flex;gap:var(--space-3);align-items:center">
+          <button type="button" class="btn btn-ghost btn-sm" id="ep-change-photo-btn" style="color:var(--brand);font-weight:600;font-size:0.85rem">
+            Change Profile Photo
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm hidden" id="ep-remove-photo-btn" style="color:var(--danger);font-size:0.82rem">
+            Remove
+          </button>
+        </div>
       </div>
 
       <button class="btn btn-primary btn-full" id="edit-profile-submit" style="margin-top:var(--space-2)">

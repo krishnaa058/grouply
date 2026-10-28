@@ -44,10 +44,28 @@
       <p class="auth-subtitle">Set your group identity and choose how other members will recognize you.</p>
     </div>
 
-    <!-- Avatar preview -->
-    <div style="display:flex;justify-content:center;margin-bottom:var(--space-6)" id="avatar-section">
-      <div class="avatar avatar-xl" id="avatar-preview" aria-label="Avatar preview" style="background:var(--accent-subtle);color:var(--brand-accent);font-size:2rem;font-weight:700">
-        ?
+    <!-- Instagram-style Avatar Picker -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);margin-bottom:var(--space-6)" id="avatar-section">
+      <div style="position:relative;cursor:pointer" id="ob-avatar-trigger" title="Click to choose profile photo">
+        <div class="avatar avatar-xl" id="avatar-preview" aria-label="Avatar preview" style="background:var(--accent-subtle);color:var(--brand-accent);font-size:2.2rem;font-weight:700;border:3px solid var(--border-color);width:96px;height:96px">
+          ?
+        </div>
+        <div style="position:absolute;bottom:2px;right:2px;width:28px;height:28px;border-radius:50%;background:var(--brand);color:#ffffff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);border:2px solid var(--bg-surface)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+          </svg>
+        </div>
+      </div>
+      <input type="file" id="ob-avatar-file" accept="image/*" style="display:none" />
+      <input type="hidden" id="ob-avatar-data" />
+      <div style="display:flex;gap:var(--space-3);align-items:center">
+        <button type="button" class="btn btn-ghost btn-sm" id="ob-choose-photo-btn" style="color:var(--brand);font-weight:600;font-size:0.85rem">
+          Choose Profile Photo
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm hidden" id="ob-remove-photo-btn" style="color:var(--danger);font-size:0.82rem">
+          Remove
+        </button>
       </div>
     </div>
 

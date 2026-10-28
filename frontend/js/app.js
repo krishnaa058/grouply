@@ -30,19 +30,58 @@ import { renderIcons, getIcon } from "./icons.js";
 const $ = (id) => document.getElementById(id);
 
 const CATEGORY_META = {
-  travel:   { icon: "compass", label: "Travel",   gradient: "linear-gradient(135deg,#1e3a5f,#2d6a4f)" },
-  sports:   { icon: "award",   label: "Sports",   gradient: "linear-gradient(135deg,#7f1d1d,#b45309)" },
-  music:    { icon: "music",   label: "Music",    gradient: "linear-gradient(135deg,#4c1d95,#6d28d9)" },
-  food:     { icon: "coffee",  label: "Food",     gradient: "linear-gradient(135deg,#78350f,#dc2626)" },
-  gaming:   { icon: "gamepad", label: "Gaming",   gradient: "linear-gradient(135deg,#064e3b,#065f46)" },
-  art:      { icon: "image",   label: "Art",      gradient: "linear-gradient(135deg,#831843,#9d174d)" },
-  outdoors: { icon: "sun",     label: "Outdoors", gradient: "linear-gradient(135deg,#1e3a2f,#166534)" },
-  tech:     { icon: "code",    label: "Tech",     gradient: "linear-gradient(135deg,#172554,#1e40af)" },
-  other:    { icon: "users",   label: "Other",    gradient: "linear-gradient(135deg,#292524,#44403c)" },
+  friends:         { icon: "users",    label: "Friends",         gradient: "linear-gradient(135deg,#2563eb,#3b82f6)" },
+  college_friends: { icon: "award",    label: "College Friends", gradient: "linear-gradient(135deg,#7c3aed,#9333ea)" },
+  trip:            { icon: "compass",  label: "Trip",            gradient: "linear-gradient(135deg,#059669,#10b981)" },
+  kitty_party:     { icon: "sparkles", label: "Kitty Party",     gradient: "linear-gradient(135deg,#db2777,#f43f5e)" },
+  old_friends:     { icon: "clock",    label: "Old Friends",     gradient: "linear-gradient(135deg,#d97706,#f59e0b)" },
+  other:           { icon: "users",    label: "Other",           gradient: "linear-gradient(135deg,#475569,#64748b)" },
+  // Backward compatibility for existing data
+  travel:          { icon: "compass",  label: "Travel",          gradient: "linear-gradient(135deg,#059669,#10b981)" },
+  sports:          { icon: "award",    label: "Sports",          gradient: "linear-gradient(135deg,#7f1d1d,#b45309)" },
+  music:           { icon: "music",    label: "Music",           gradient: "linear-gradient(135deg,#4c1d95,#6d28d9)" },
+  food:            { icon: "coffee",   label: "Food",            gradient: "linear-gradient(135deg,#78350f,#dc2626)" },
+  gaming:          { icon: "gamepad",  label: "Gaming",          gradient: "linear-gradient(135deg,#064e3b,#065f46)" },
+  art:             { icon: "image",    label: "Art",             gradient: "linear-gradient(135deg,#831843,#9d174d)" },
+  outdoors:        { icon: "sun",      label: "Outdoors",        gradient: "linear-gradient(135deg,#1e3a2f,#166534)" },
+  tech:            { icon: "code",     label: "Tech",            gradient: "linear-gradient(135deg,#172554,#1e40af)" },
 };
 
 function getCategoryMeta(cat) {
-  return CATEGORY_META[cat] || CATEGORY_META.other;
+  if (!cat) return CATEGORY_META.other;
+  const key = String(cat).toLowerCase().replace(/\s+/g, "_");
+  if (CATEGORY_META[key]) return CATEGORY_META[key];
+  return {
+    icon: "users",
+    label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, " "),
+    gradient: "linear-gradient(135deg,#334155,#475569)"
+  };
+}
+
+function processAvatarFile(file, onDone) {
+  if (!file || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 300; // Retina 300x300 square
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      // Center crop square
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+      onDone(dataUrl);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function getInitial(name) {
@@ -783,12 +822,13 @@ async function loadGroupArchive(groupId) {
   const launchBtn = $("gd-drive-launch-btn");
   const linkInput = $("gd-drive-link-input");
 
-  if (g.google_drive_folder_url) {
+  const driveUrl = g.drive_folder_link || g.google_drive_folder_url;
+  if (driveUrl) {
     statusEl.textContent = "Connected";
     statusEl.className = "badge badge-success";
     connView.classList.remove("hidden");
-    launchBtn.href = g.google_drive_folder_url;
-    linkInput.value = g.google_drive_folder_url;
+    launchBtn.href = driveUrl;
+    linkInput.value = driveUrl;
   } else {
     statusEl.textContent = "Not connected";
     statusEl.className = "badge badge-neutral";
@@ -1437,6 +1477,9 @@ $("group-detail-modal").addEventListener("click", (e) => {
 // ── Modals: Create Group & Join Group ─────────────────────────────────────────
 function openCreateGroupModal() {
   $("create-group-modal").classList.add("open");
+  $("cg-name-err").classList.remove("show");
+  $("cg-drive-err").classList.remove("show");
+  $("create-group-alert").className = "alert";
   $("cg-name").focus();
 }
 
@@ -1445,9 +1488,20 @@ function closeCreateGroupModal() {
   $("cg-name").value = "";
   $("cg-desc").value = "";
   $("cg-category").value = "";
+  $("cg-custom-category").value = "";
+  $("cg-custom-category-group").classList.add("hidden");
+  $("cg-drive-link").value = "";
   $("cg-private").checked = true;
+  $("cg-name-err").classList.remove("show");
+  $("cg-drive-err").classList.remove("show");
   $("create-group-alert").className = "alert";
 }
+
+$("cg-category").addEventListener("change", () => {
+  const isOther = $("cg-category").value === "other";
+  $("cg-custom-category-group").classList.toggle("hidden", !isOther);
+  if (isOther) $("cg-custom-category").focus();
+});
 
 $("open-create-group-btn").addEventListener("click", openCreateGroupModal);
 $("create-group-btn-empty").addEventListener("click", openCreateGroupModal);
@@ -1460,21 +1514,64 @@ $("create-group-modal").addEventListener("click", (e) => {
 $("create-group-submit").addEventListener("click", async () => {
   const name = $("cg-name").value.trim();
   const desc = $("cg-desc").value.trim();
-  const category = $("cg-category").value;
+  let category = $("cg-category").value;
   const isPrivate = $("cg-private").checked;
+  const driveLink = $("cg-drive-link").value.trim();
+
+  let hasError = false;
 
   if (!name) {
     $("cg-name-err").textContent = "Group name is required.";
     $("cg-name-err").classList.add("show");
-    return;
+    hasError = true;
+  } else {
+    $("cg-name-err").classList.remove("show");
   }
-  $("cg-name-err").classList.remove("show");
+
+  if (!category) {
+    const alertEl = $("create-group-alert");
+    alertEl.textContent = "Please select a group category.";
+    alertEl.className = "alert alert-error show";
+    hasError = true;
+  }
+
+  if (category === "other") {
+    const customCat = $("cg-custom-category").value.trim();
+    if (!customCat) {
+      const alertEl = $("create-group-alert");
+      alertEl.textContent = "Please enter your custom category name.";
+      alertEl.className = "alert alert-error show";
+      hasError = true;
+    } else {
+      category = customCat;
+    }
+  }
+
+  if (!driveLink) {
+    $("cg-drive-err").textContent = "Google Drive folder link is required to store group media.";
+    $("cg-drive-err").classList.add("show");
+    hasError = true;
+  } else if (!driveLink.startsWith("http://") && !driveLink.startsWith("https://")) {
+    $("cg-drive-err").textContent = "Please enter a valid URL (e.g. https://drive.google.com/drive/folders/...).";
+    $("cg-drive-err").classList.add("show");
+    hasError = true;
+  } else {
+    $("cg-drive-err").classList.remove("show");
+  }
+
+  if (hasError) return;
 
   setLoading("create-group-submit", true);
   try {
     const group = await callApiJson("/api/groups", {
       method: "POST",
-      body: { name, description: desc || null, category: category || null, is_private: isPrivate },
+      body: {
+        name,
+        description: desc || null,
+        category: category || null,
+        is_private: isPrivate,
+        drive_folder_link: driveLink,
+      },
     });
 
     closeCreateGroupModal();
@@ -1553,15 +1650,79 @@ function checkInviteCodeInUrl() {
   }
 }
 
-// ── Profile Edit & Member Profile Modals ──────────────────────────────────────
+// ── Profile Edit & Member Profile Modals (Instagram-style Photo Picker) ───────
+let epAvatarData = "";
+
 function openEditProfileModal() {
   if (!currentProfile) return;
   $("edit-profile-modal").classList.add("open");
   $("ep-display-name").value = currentProfile.display_name || "";
   $("ep-username").value = currentProfile.username || "";
   $("ep-bio").value = currentProfile.bio || "";
-  $("ep-avatar-url").value = currentProfile.avatar_url || "";
+  $("edit-profile-alert").className = "alert";
+
+  epAvatarData = currentProfile.avatar_url || "";
+  $("ep-avatar-data").value = epAvatarData;
+
+  const prevEl = $("ep-avatar-preview");
+  const remBtn = $("ep-remove-photo-btn");
+
+  if (epAvatarData) {
+    prevEl.innerHTML = `<img src="${escHtml(epAvatarData)}" alt="Profile photo" style="width:100%;height:100%;border-radius:50%;object-fit:cover" />`;
+    if (remBtn) remBtn.classList.remove("hidden");
+  } else {
+    prevEl.textContent = getInitial(currentProfile.display_name || currentProfile.username);
+    if (remBtn) remBtn.classList.add("hidden");
+  }
 }
+
+const epTrigger = $("ep-avatar-picker-trigger");
+const epFileInp = $("ep-avatar-file");
+const epChangeBtn = $("ep-change-photo-btn");
+const epRemoveBtn = $("ep-remove-photo-btn");
+
+if (epTrigger && epFileInp) {
+  epTrigger.addEventListener("click", () => epFileInp.click());
+}
+if (epChangeBtn && epFileInp) {
+  epChangeBtn.addEventListener("click", () => epFileInp.click());
+}
+
+if (epFileInp) {
+  epFileInp.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    processAvatarFile(file, (dataUrl) => {
+      epAvatarData = dataUrl;
+      $("ep-avatar-data").value = dataUrl;
+      const prevEl = $("ep-avatar-preview");
+      if (prevEl) {
+        prevEl.innerHTML = `<img src="${dataUrl}" alt="Profile photo" style="width:100%;height:100%;border-radius:50%;object-fit:cover" />`;
+      }
+      if (epRemoveBtn) epRemoveBtn.classList.remove("hidden");
+    });
+  });
+}
+
+if (epRemoveBtn) {
+  epRemoveBtn.addEventListener("click", () => {
+    epAvatarData = "";
+    $("ep-avatar-data").value = "";
+    if (epFileInp) epFileInp.value = "";
+    epRemoveBtn.classList.add("hidden");
+    const prevEl = $("ep-avatar-preview");
+    if (prevEl) {
+      prevEl.textContent = getInitial($("ep-display-name").value || currentProfile?.display_name);
+    }
+  });
+}
+
+$("ep-display-name").addEventListener("input", () => {
+  if (!epAvatarData) {
+    const prevEl = $("ep-avatar-preview");
+    if (prevEl) prevEl.textContent = getInitial($("ep-display-name").value);
+  }
+});
 
 $("profile-edit-btn").addEventListener("click", openEditProfileModal);
 $("edit-profile-close").addEventListener("click", () => $("edit-profile-modal").classList.remove("open"));
@@ -1573,10 +1734,12 @@ $("edit-profile-submit").addEventListener("click", async () => {
   const displayName = $("ep-display-name").value.trim();
   const username = $("ep-username").value.trim().toLowerCase();
   const bio = $("ep-bio").value.trim();
-  const avatarUrl = $("ep-avatar-url").value.trim();
+  const avatarUrl = $("ep-avatar-data").value.trim() || null;
 
   if (!displayName || !username) {
-    alert("Display name and username are required.");
+    const alertEl = $("edit-profile-alert");
+    alertEl.textContent = "Display name and username are required.";
+    alertEl.className = "alert alert-error show";
     return;
   }
 
@@ -1584,13 +1747,15 @@ $("edit-profile-submit").addEventListener("click", async () => {
   try {
     const updated = await callApiJson("/api/me", {
       method: "PUT",
-      body: { display_name: displayName, username, bio: bio || null, avatar_url: avatarUrl || null },
+      body: { display_name: displayName, username, bio: bio || null, avatar_url: avatarUrl },
     });
     currentProfile = updated;
     renderUserProfile(currentProfile);
     $("edit-profile-modal").classList.remove("open");
   } catch (err) {
-    alert(err.message || "Failed to update profile.");
+    const alertEl = $("edit-profile-alert");
+    alertEl.textContent = err.message || "Failed to update profile.";
+    alertEl.className = "alert alert-error show";
   }
   setLoading("edit-profile-submit", false, "Save Changes");
 });

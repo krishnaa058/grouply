@@ -73,14 +73,80 @@ async function prefillFromProfile(session) {
   }
 }
 
-// ── Avatar initial ────────────────────────────────────────────────────────────
+// ── Avatar initial & Photo Picker (Instagram Style) ───────────────────────────
+let currentAvatarData = "";
+
+function processAvatarFile(file, onDone) {
+  if (!file || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 300; // Retina 300x300 square
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      // Center crop square
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+      onDone(dataUrl);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+const obTrigger = $("ob-avatar-trigger");
+const obFileInp = $("ob-avatar-file");
+const obChooseBtn = $("ob-choose-photo-btn");
+const obRemoveBtn = $("ob-remove-photo-btn");
+
+if (obTrigger && obFileInp) {
+  obTrigger.addEventListener("click", () => obFileInp.click());
+}
+if (obChooseBtn && obFileInp) {
+  obChooseBtn.addEventListener("click", () => obFileInp.click());
+}
+
+if (obFileInp) {
+  obFileInp.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    processAvatarFile(file, (dataUrl) => {
+      currentAvatarData = dataUrl;
+      const prevEl = $("avatar-preview");
+      if (prevEl) {
+        prevEl.innerHTML = `<img src="${dataUrl}" alt="Profile photo" style="width:100%;height:100%;border-radius:50%;object-fit:cover" />`;
+      }
+      if (obRemoveBtn) obRemoveBtn.classList.remove("hidden");
+    });
+  });
+}
+
+if (obRemoveBtn) {
+  obRemoveBtn.addEventListener("click", () => {
+    currentAvatarData = "";
+    if (obFileInp) obFileInp.value = "";
+    obRemoveBtn.classList.add("hidden");
+    updateAvatarPreview($("ob-name").value);
+  });
+}
+
 $("ob-name").addEventListener("input", () => {
-  updateAvatarPreview($("ob-name").value);
+  if (!currentAvatarData) {
+    updateAvatarPreview($("ob-name").value);
+  }
 });
 
 function updateAvatarPreview(name) {
   const el = $("avatar-preview");
-  if (!el || el.tagName === "IMG") return;
+  if (!el || currentAvatarData) return;
   const initial = (name || "?")[0].toUpperCase();
   el.textContent = initial;
 }
@@ -176,7 +242,12 @@ $("onboard-form").addEventListener("submit", async (e) => {
   try {
     await callApiJson("/api/me/onboard", {
       method: "POST",
-      body: { username, display_name: displayName, bio: bio || null },
+      body: {
+        username,
+        display_name: displayName,
+        bio: bio || null,
+        avatar_url: currentAvatarData || null,
+      },
     });
     window.location.href = "index.html";
   } catch (err) {

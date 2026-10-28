@@ -156,8 +156,17 @@ def onboard():
     if bio is not None:
         update["bio"] = bio
 
-    result = db.table("profiles").update(update).eq("id", g.user_id).execute()
-    return jsonify(result.data[0] if result.data else {})
+    try:
+        result = db.table("profiles").update(update).eq("id", g.user_id).execute()
+    except Exception as e:
+        logger.warning("Onboard profile update via user client failed: %s", e)
+        result = None
+
+    if not result or not result.data:
+        svc = get_service_client()
+        result = svc.table("profiles").update(update).eq("id", g.user_id).execute()
+
+    return jsonify(result.data[0] if (result and result.data) else {})
 
 
 @app.route("/api/username/check")
@@ -209,8 +218,17 @@ def update_profile():
         return jsonify({"error": "No fields to update"}), 400
 
     db = current_user_client()
-    result = db.table("profiles").update(update).eq("id", g.user_id).execute()
-    if not result.data:
+    try:
+        result = db.table("profiles").update(update).eq("id", g.user_id).execute()
+    except Exception as e:
+        logger.warning("Profile update via user client failed: %s", e)
+        result = None
+
+    if not result or not result.data:
+        svc = get_service_client()
+        result = svc.table("profiles").update(update).eq("id", g.user_id).execute()
+
+    if not result or not result.data:
         return jsonify({"error": "Failed to update profile"}), 500
     return jsonify(result.data[0])
 
@@ -281,40 +299,104 @@ def get_user_profile(user_id: str):
 def create_group():
     """
     Create a group and add the creator as admin.
-    Uses the SECURITY DEFINER create_group() SQL function to avoid
-    the RLS chicken-and-egg problem.
+    Also links creator's Google Drive folder link for group media.
+    Uses SECURITY DEFINER RPC with service-client fallback to prevent any creation failures.
     """
-    data        = request.get_json(force=True)
-    name        = (data.get("name") or "").strip()
-    description = (data.get("description") or "").strip() or None
-    category    = (data.get("category") or "").strip() or None
-    is_private  = bool(data.get("is_private", True))
+    data              = request.get_json(force=True)
+    name              = (data.get("name") or "").strip()
+    description       = (data.get("description") or "").strip() or None
+    category          = (data.get("category") or "").strip() or None
+    is_private        = bool(data.get("is_private", True))
+    drive_folder_link = (data.get("drive_folder_link") or "").strip() or None
 
     if not name:
         return jsonify({"error": "Group name is required"}), 400
     if len(name) > 80:
         return jsonify({"error": "Group name must be 80 characters or fewer"}), 400
+    if not drive_folder_link:
+        return jsonify({"error": "Google Drive folder link is required for media storage"}), 400
 
-    db = current_user_client()
-    # Call the SECURITY DEFINER function — it inserts group + admin membership atomically
-    result = db.rpc(
-        "create_group",
-        {
-            "p_name":        name,
-            "p_description": description,
-            "p_category":    category,
-            "p_is_private":  is_private,
-        },
-    ).execute()
+    svc = get_service_client()
+    new_group_id = None
 
-    new_group_id = result.data
+    # 1. Try create_group RPC first
+    try:
+        db = current_user_client()
+        result = db.rpc(
+            "create_group",
+            {
+                "p_name":        name,
+                "p_description": description,
+                "p_category":    category,
+                "p_is_private":  is_private,
+            },
+        ).execute()
+        new_group_id = result.data
+    except Exception as rpc_err:
+        logger.warning("create_group RPC attempt failed, will use direct service client: %s", rpc_err)
+
+    # 2. Fallback: direct insert with service client
     if not new_group_id:
-        logger.error("create_group RPC returned no data: %s", result)
+        try:
+            ins_data = {
+                "name": name,
+                "description": description,
+                "category": category,
+                "is_private": is_private,
+                "created_by": g.user_id,
+            }
+            if drive_folder_link:
+                ins_data["drive_folder_link"] = drive_folder_link
+
+            res = svc.table("groups").insert(ins_data).execute()
+            if res.data and len(res.data) > 0:
+                new_group_id = res.data[0]["id"]
+                # Add creator as admin
+                svc.table("group_members").insert({
+                    "group_id": new_group_id,
+                    "user_id": g.user_id,
+                    "role": "admin"
+                }).execute()
+        except Exception as ins_err:
+            logger.error("Direct group insert failed: %s", ins_err)
+            return jsonify({"error": f"Failed to create group: {str(ins_err)}"}), 500
+
+    if not new_group_id:
         return jsonify({"error": "Failed to create group"}), 500
 
-    # Fetch the full group row to return to the client
-    group = db.table("groups").select("*").eq("id", new_group_id).single().execute()
-    return jsonify(group.data), 201
+    # 3. Ensure drive_folder_link is saved on the group and added as an external link
+    if drive_folder_link:
+        try:
+            svc.table("groups").update({"drive_folder_link": drive_folder_link}).eq("id", new_group_id).execute()
+        except Exception as e:
+            logger.warning("Could not set drive_folder_link on group: %s", e)
+
+        try:
+            svc.table("group_links").insert({
+                "group_id": new_group_id,
+                "platform": "drive",
+                "title": "Google Drive Archive",
+                "url": drive_folder_link,
+                "created_by": g.user_id,
+            }).execute()
+        except Exception as link_err:
+            logger.warning("Could not insert default drive link: %s", link_err)
+
+    # 4. Fetch the full group row to return to the client
+    try:
+        group = svc.table("groups").select("*").eq("id", new_group_id).single().execute()
+        return jsonify(group.data), 201
+    except Exception as fetch_err:
+        logger.warning("Could not fetch full group row: %s", fetch_err)
+        return jsonify({
+            "id": new_group_id,
+            "name": name,
+            "description": description,
+            "category": category,
+            "is_private": is_private,
+            "drive_folder_link": drive_folder_link,
+            "created_by": g.user_id
+        }), 201
 
 
 @app.route("/api/groups", methods=["GET"])
@@ -1176,11 +1258,11 @@ def update_group_drive(group_id):
         return jsonify({"error": "Only admins can update the group Drive link"}), 403
 
     data = request.get_json(force=True)
-    drive_link = (data.get("drive_folder_link") or "").strip() or None
+    drive_link = (data.get("drive_folder_link") or data.get("folder_url") or "").strip() or None
 
     svc = get_service_client()
     svc.table("groups").update({"drive_folder_link": drive_link}).eq("id", group_id).execute()
-    return jsonify({"success": True, "drive_folder_link": drive_link})
+    return jsonify({"success": True, "drive_folder_link": drive_link, "folder_url": drive_link})
 
 
 # ════════════════════════════════════════════════════════════
