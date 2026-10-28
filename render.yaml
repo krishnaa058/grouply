@@ -27,7 +27,6 @@ services:
   - type: web
     name: grouply-frontend
     runtime: static
-    plan: free
     staticPublishPath: ./frontend
     routes:
       - type: rewrite
