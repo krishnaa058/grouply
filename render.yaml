@@ -28,7 +28,6 @@ services:
     name: grouply-frontend
     runtime: static
     plan: free
-    region: oregon
     staticPublishPath: ./frontend
     routes:
       - type: rewrite
