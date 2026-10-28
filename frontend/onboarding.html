@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Grouply — Set Up Your Profile</title>
+  <meta name="description" content="Set up your Grouply profile with a username and display name." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <script>
+    window.GROUPLY_CONFIG = {
+      SUPABASE_URL:     "REPLACE_WITH_YOUR_SUPABASE_URL",
+      SUPABASE_ANON_KEY:"REPLACE_WITH_YOUR_SUPABASE_ANON_KEY",
+      API_BASE_URL:     "http://localhost:5000",
+    };
+  </script>
+</head>
+<body>
+
+<main class="onboard-page" id="onboard-page">
+
+  <!-- Background blobs -->
+  <div aria-hidden="true" style="
+    position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0">
+    <div style="
+      position:absolute;top:-80px;right:-80px;
+      width:380px;height:380px;border-radius:50%;
+      background:radial-gradient(circle,rgba(168,85,247,0.2) 0%,transparent 70%);
+      filter:blur(40px)"></div>
+    <div style="
+      position:absolute;bottom:-100px;left:-60px;
+      width:340px;height:340px;border-radius:50%;
+      background:radial-gradient(circle,rgba(103,80,244,0.18) 0%,transparent 70%);
+      filter:blur(40px)"></div>
+  </div>
+
+  <div class="onboard-card glass" style="position:relative;z-index:1">
+
+    <!-- Logo mark -->
+    <div class="auth-logo">
+      <div class="logo-text">Grouply</div>
+      <div class="logo-tagline" style="font-size:0.95rem;color:var(--text-secondary);margin-top:8px">
+        Almost there! Set up your profile 🎉
+      </div>
+    </div>
+
+    <!-- Avatar preview -->
+    <div style="display:flex;justify-content:center;margin-bottom:24px" id="avatar-section">
+      <div class="avatar avatar-xl" id="avatar-preview" aria-label="Avatar preview">
+        <!-- Initials or image will be inserted by JS -->
+        ?
+      </div>
+    </div>
+
+    <div id="onboard-alert" class="alert" role="alert" aria-live="polite"
+         style="margin-bottom:12px"></div>
+
+    <form id="onboard-form" novalidate style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- Display name -->
+      <div class="input-group">
+        <label for="ob-name">Display name</label>
+        <input id="ob-name" type="text" class="input"
+               placeholder="How you appear in groups" autocomplete="name" />
+        <span class="form-error" id="ob-name-err"></span>
+      </div>
+
+      <!-- Username -->
+      <div class="input-group">
+        <label for="ob-username">Username <span style="color:var(--error)">*</span></label>
+        <input id="ob-username" type="text" class="input"
+               placeholder="e.g. alex_adventures"
+               autocomplete="username"
+               pattern="[a-z0-9_]{3,30}"
+               required />
+        <!-- Live availability indicator -->
+        <div class="username-status" id="username-status" aria-live="polite"></div>
+        <span class="form-error" id="ob-username-err"></span>
+      </div>
+
+      <!-- Bio (optional) -->
+      <div class="input-group">
+        <label for="ob-bio">Bio <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+        <textarea id="ob-bio" class="input"
+                  placeholder="A few words about yourself…"
+                  rows="2"
+                  style="resize:vertical;min-height:60px"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" id="onboard-submit">
+        Let's go 🚀
+      </button>
+    </form>
+
+  </div><!-- /onboard-card -->
+</main>
+
+<script type="module" src="js/onboarding.js"></script>
+</body>
+</html>

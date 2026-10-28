@@ -1,0 +1,39 @@
+services:
+  # ── Backend: Flask API Service ──────────────────────────────
+  - type: web
+    name: grouply-backend
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_MODE
+        value: asymmetric
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: PORT
+        value: 5000
+
+  # ── Frontend: Static Site ───────────────────────────────────
+  - type: web
+    name: grouply-frontend
+    runtime: static
+    plan: free
+    region: oregon
+    staticPublishPath: ./frontend
+    routes:
+      - type: rewrite
+        source: /login
+        destination: /login.html
+      - type: rewrite
+        source: /onboarding
+        destination: /onboarding.html
