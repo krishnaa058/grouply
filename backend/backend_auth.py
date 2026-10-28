@@ -51,28 +51,53 @@ def _get_jwks_client() -> PyJWKClient:
 def verify_token(token: str) -> dict:
     """
     Verify a Supabase JWT and return its decoded payload.
-    Raises jwt.InvalidTokenError (or subclass) on failure.
+    Supports asymmetric (JWKS) and symmetric (HS256).
+    Falls back to Supabase auth API to guarantee valid tokens never fail.
     """
-    if JWT_MODE == "symmetric":
-        # Legacy HS256 — shared secret
-        payload = jwt.decode(
-            token,
-            JWT_SECRET,
-            algorithms=["HS256"],
-            audience=_AUDIENCE,
-        )
-    else:
-        # Asymmetric RS256 / ES256 via JWKS
-        client = _get_jwks_client()
-        signing_key = client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256", "ES256"],
-            audience=_AUDIENCE,
-        )
+    # 1. Try local decode based on unverified header
+    try:
+        header = jwt.get_unverified_header(token)
+        alg = header.get("alg")
 
-    return payload
+        if alg == "HS256" and JWT_SECRET:
+            return jwt.decode(
+                token,
+                JWT_SECRET,
+                algorithms=["HS256"],
+                audience=_AUDIENCE,
+            )
+        elif alg in ("RS256", "ES256"):
+            client = _get_jwks_client()
+            signing_key = client.get_signing_key_from_jwt(token)
+            return jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256", "ES256"],
+                audience=_AUDIENCE,
+            )
+    except Exception as local_err:
+        logger.info("Local JWT verification attempt: %s; trying Supabase API fallback", local_err)
+
+    # 2. Fallback: Verify directly with Supabase Auth API (guaranteed accurate)
+    try:
+        auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        user_res = auth_client.auth.get_user(token)
+        if user_res and user_res.user:
+            u = user_res.user
+            user_meta = getattr(u, "user_metadata", {}) or {}
+            return {
+                "sub": str(u.id),
+                "id": str(u.id),
+                "email": u.email,
+                "user_metadata": user_meta,
+                "aud": _AUDIENCE,
+            }
+    except Exception as api_err:
+        logger.warning("Supabase auth.get_user fallback failed: %s", api_err)
+        raise InvalidTokenError(f"Token verification failed: {api_err}")
+
+    raise InvalidTokenError("Invalid token")
+
 
 
 # ── User-scoped Supabase client ───────────────────────────────────────────────

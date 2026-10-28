@@ -53,24 +53,33 @@ function togglePw(inputId) {
 }
 
 // ── Redirect after successful auth ────────────────────────────────────────────
+let isRedirecting = false;
 async function handlePostAuth() {
+  if (isRedirecting) return;
+  isRedirecting = true;
+  showAlert("Signed in! Loading Grouply…", "info");
   try {
     const profile = await callApiJson("/api/me");
     // If profile has no chosen display name, send to onboarding
-    // (Trigger creates a username but display_name might be null for email signups)
     if (!profile.display_name) {
       window.location.href = "onboarding.html";
     } else {
       window.location.href = "index.html";
     }
-  } catch {
-    // If backend unreachable or no profile yet, go to onboarding
-    window.location.href = "onboarding.html";
+  } catch (err) {
+    console.warn("Post-auth profile check:", err);
+    // If backend profile check has any issue, proceed to index.html
+    window.location.href = "index.html";
   }
 }
 
 // ── Check if already signed in ────────────────────────────────────────────────
 (async () => {
+  const hash = window.location.hash;
+  if (hash.includes("access_token")) {
+    showAlert("Completing Google sign-in…", "info");
+  }
+
   const session = await getSession();
   if (session) {
     await handlePostAuth();
@@ -78,7 +87,6 @@ async function handlePostAuth() {
   }
 
   // Check if this is a password-reset redirect (Supabase adds #type=recovery)
-  const hash = window.location.hash;
   if (hash.includes("type=recovery") || hash.includes("type=signup")) {
     // supabase-js v2 detects session from URL hash automatically
     // Wait briefly for it to settle
@@ -198,7 +206,7 @@ $("signup-form").addEventListener("submit", async (e) => {
   // the session won't be set yet.
   if (data?.user && !data.session) {
     showAlert(
-      "✉️ Check your email to confirm your account, then sign in.",
+      "Check your email to confirm your account, then sign in.",
       "info"
     );
     showPanel("login");
@@ -209,7 +217,7 @@ $("signup-form").addEventListener("submit", async (e) => {
 // ── GOOGLE buttons ────────────────────────────────────────────────────────────
 async function handleGoogle() {
   clearAlert();
-  const { error } = await signInWithGoogle(`${window.location.origin}/login.html`);
+  const { error } = await signInWithGoogle(`${window.location.origin}/index.html`);
   if (error) showAlert(error.message);
   // Browser redirects to Google; on return supabase-js handles session
 }
@@ -239,7 +247,7 @@ $("forgot-form").addEventListener("submit", async (e) => {
   if (error) {
     showAlert(error.message);
   } else {
-    showAlert("✉️ Reset link sent! Check your email.", "success");
+    showAlert("Reset link sent. Please check your email inbox.", "success");
   }
 });
 
@@ -277,7 +285,7 @@ $("reset-form").addEventListener("submit", async (e) => {
   if (error) {
     showAlert(error.message);
   } else {
-    showAlert("✅ Password updated! Signing you in…", "success");
+    showAlert("Password updated successfully. Signing you in…", "success");
     setTimeout(() => (window.location.href = "index.html"), 1500);
   }
 });

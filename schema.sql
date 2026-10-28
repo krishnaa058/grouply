@@ -44,16 +44,6 @@ CREATE TABLE IF NOT EXISTS groups (
 
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 
--- Members of the group can read it; public groups are readable by all
-CREATE POLICY "groups: members can read" ON groups
-  FOR SELECT USING (
-    (NOT is_private)
-    OR EXISTS (
-      SELECT 1 FROM group_members gm
-      WHERE gm.group_id = id AND gm.user_id = auth.uid()
-    )
-  );
-
 CREATE POLICY "groups: creator can update" ON groups
   FOR UPDATE USING (created_by = auth.uid());
 
@@ -70,6 +60,17 @@ CREATE TABLE IF NOT EXISTS group_members (
 );
 
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
+
+-- Members of the group can read it; public groups are readable by all
+-- (Defined after group_members table exists)
+CREATE POLICY "groups: members can read" ON groups
+  FOR SELECT USING (
+    (NOT is_private)
+    OR EXISTS (
+      SELECT 1 FROM group_members gm
+      WHERE gm.group_id = id AND gm.user_id = auth.uid()
+    )
+  );
 
 CREATE POLICY "group_members: members can read own group membership" ON group_members
   FOR SELECT USING (

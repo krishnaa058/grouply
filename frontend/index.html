@@ -3,13 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Grouply</title>
-  <meta name="description" content="Grouply — the group-centric social platform. Every memory, plan and adventure belongs to the whole group." />
+  <title>Grouply — Group-Centered Social Platform</title>
+  <meta name="description" content="Grouply is a group-centered social platform where memories, plans, expenses, and decisions belong to the whole group." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="css/style.css" />
 
   <script>
+    (function() {
+      const savedTheme = localStorage.getItem('grouply_theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme === 'dark' || (!savedTheme && prefersDark) ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+
     window.GROUPLY_CONFIG = {
       SUPABASE_URL:     "https://bhpunicptjxvfyeqdkak.supabase.co",
       SUPABASE_ANON_KEY:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocHVuaWNwdGp4dmZ5ZXFka2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxOTQ1MzEsImV4cCI6MjEwODc3MDUzMX0.2RtwNBFqKexFlnAleo_JdxURI2b0WPKXPCaAX8XjId4",
@@ -21,265 +28,627 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
-     MAIN APP SHELL
-     Tabs: Feed | Explore | Groups | Chat | Profile
-══════════════════════════════════════════════════════════════ -->
 <div id="app-shell">
 
-  <!-- ── Top Bar ──────────────────────────────────────────── -->
-  <header class="topbar" id="topbar">
-    <span class="topbar-logo" id="topbar-logo">Grouply</span>
-    <span class="topbar-title hidden" id="topbar-title"></span>
-    <button class="topbar-action hidden" id="topbar-action" aria-label="Action">＋</button>
-  </header>
-
-  <!-- ── Tab Content ──────────────────────────────────────── -->
-  <div class="tab-content" id="tab-content">
-
-    <!-- ── FEED ─────────────────────────────────────────── -->
-    <section id="screen-feed" class="screen active" aria-label="Feed">
-      <div class="feed-empty" id="feed-empty">
-        <div class="feed-empty-icon">🏕️</div>
-        <h3>No group posts yet</h3>
-        <p>Join a group and posts from your groups will appear here.</p>
+  <!-- ── Desktop Sidebar ───────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar" aria-label="Desktop navigation">
+    <div class="sidebar-brand">
+      <div class="brand-logo" style="width:36px;height:36px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
       </div>
-      <div id="feed-list" class="hidden" style="padding:12px;display:flex;flex-direction:column;gap:12px"></div>
-    </section>
+      <span class="brand-name">Grouply</span>
+    </div>
 
-    <!-- ── EXPLORE ───────────────────────────────────────── -->
-    <section id="screen-explore" class="screen" aria-label="Explore">
-      <!-- Search bar -->
-      <div style="padding:16px 16px 8px">
-        <div class="input-wrapper">
-          <input id="explore-search" type="search" class="input"
-                 placeholder="🔍  Search public groups…"
-                 style="padding-right:16px" />
-        </div>
-      </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-item active" data-tab="feed" id="side-tab-feed">
+        <span class="icon-wrap" data-icon="home"></span>
+        <span>Feed</span>
+      </button>
+      <button class="sidebar-nav-item" data-tab="explore" id="side-tab-explore">
+        <span class="icon-wrap" data-icon="compass"></span>
+        <span>Explore</span>
+      </button>
+      <button class="sidebar-nav-item" data-tab="groups" id="side-tab-groups">
+        <span class="icon-wrap" data-icon="users"></span>
+        <span>Groups</span>
+      </button>
+      <button class="sidebar-nav-item" data-tab="chat" id="side-tab-chat">
+        <span class="icon-wrap" data-icon="message-square"></span>
+        <span>Chat</span>
+      </button>
+      <button class="sidebar-nav-item" data-tab="profile" id="side-tab-profile">
+        <span class="icon-wrap" data-icon="user"></span>
+        <span>Profile</span>
+      </button>
+    </nav>
 
-      <div style="padding:0 16px 8px">
-        <h2>Explore by category</h2>
-      </div>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" id="desktop-theme-toggle" aria-label="Toggle theme">
+        <span class="icon-wrap" id="desktop-theme-icon" data-icon="moon"></span>
+        <span id="desktop-theme-label">Dark mode</span>
+      </button>
 
-      <!-- Category tiles -->
-      <div class="explore-grid" id="explore-grid">
-        <div class="category-tile" data-category="travel"
-             style="background:linear-gradient(135deg,#1e3a5f,#2d6a4f)">
-          <span class="tile-emoji">✈️</span>
-          <span class="tile-name">Travel</span>
-        </div>
-        <div class="category-tile" data-category="sports"
-             style="background:linear-gradient(135deg,#7f1d1d,#b45309)">
-          <span class="tile-emoji">⚽</span>
-          <span class="tile-name">Sports</span>
-        </div>
-        <div class="category-tile" data-category="music"
-             style="background:linear-gradient(135deg,#4c1d95,#6d28d9)">
-          <span class="tile-emoji">🎵</span>
-          <span class="tile-name">Music</span>
-        </div>
-        <div class="category-tile" data-category="food"
-             style="background:linear-gradient(135deg,#78350f,#dc2626)">
-          <span class="tile-emoji">🍕</span>
-          <span class="tile-name">Food</span>
-        </div>
-        <div class="category-tile" data-category="gaming"
-             style="background:linear-gradient(135deg,#064e3b,#065f46)">
-          <span class="tile-emoji">🎮</span>
-          <span class="tile-name">Gaming</span>
-        </div>
-        <div class="category-tile" data-category="art"
-             style="background:linear-gradient(135deg,#831843,#9d174d)">
-          <span class="tile-emoji">🎨</span>
-          <span class="tile-name">Art</span>
-        </div>
-        <div class="category-tile" data-category="outdoors"
-             style="background:linear-gradient(135deg,#1e3a2f,#166534)">
-          <span class="tile-emoji">🏔️</span>
-          <span class="tile-name">Outdoors</span>
-        </div>
-        <div class="category-tile" data-category="tech"
-             style="background:linear-gradient(135deg,#172554,#1e40af)">
-          <span class="tile-emoji">💻</span>
-          <span class="tile-name">Tech</span>
+      <div class="user-pill" id="sidebar-user-pill" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);cursor:pointer;background:var(--bg-secondary);border:1px solid var(--border-subtle);margin-top:var(--space-2)">
+        <div class="avatar avatar-sm" id="sidebar-avatar" style="width:32px;height:32px;border-radius:50%;background:var(--accent-subtle);color:var(--brand-accent);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.85rem">?</div>
+        <div style="flex:1;min-width:0">
+          <div id="sidebar-user-name" style="font-size:0.875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">User</div>
+          <div id="sidebar-user-handle" style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@user</div>
         </div>
       </div>
+    </div>
+  </aside>
 
-      <!-- Public groups list (populated in Milestone 2+) -->
-      <div id="explore-results" style="padding:0 16px 16px;display:none">
-        <h3 id="explore-results-title" style="margin-bottom:12px"></h3>
-        <div id="explore-results-list" style="display:flex;flex-direction:column;gap:12px"></div>
+  <!-- ── Main App Content Area ─────────────────────────────── -->
+  <div class="app-main">
+
+    <!-- ── Mobile Top Bar ──────────────────────────────────── -->
+    <header class="topbar" id="topbar">
+      <div style="display:flex;align-items:center;gap:var(--space-2)">
+        <div class="brand-logo" style="width:28px;height:28px;border-radius:var(--radius-md)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <span class="topbar-logo" id="topbar-logo">Grouply</span>
       </div>
-    </section>
-
-    <!-- ── GROUPS ────────────────────────────────────────── -->
-    <section id="screen-groups" class="screen" aria-label="Groups">
-      <!-- My groups list -->
-      <!-- Join by code button always visible at top of groups screen -->
-      <div style="padding:16px 16px 0;display:flex;justify-content:flex-end">
-        <button class="btn btn-ghost" id="open-join-code-btn"
-                style="font-size:0.82rem;gap:6px">
-          🔗 Join with code
+      <span class="topbar-title hidden" id="topbar-title">Feed</span>
+      <div style="display:flex;align-items:center;gap:var(--space-2)">
+        <button class="btn btn-ghost" id="mobile-theme-toggle" aria-label="Toggle theme" style="padding:var(--space-2)">
+          <span class="icon-wrap" id="mobile-theme-icon" data-icon="moon"></span>
+        </button>
+        <button class="topbar-action" id="topbar-action" aria-label="Action" style="display:none">
+          <span class="icon-wrap" data-icon="plus"></span>
         </button>
       </div>
-      <div id="groups-empty" style="
-        flex:1;display:flex;flex-direction:column;
-        align-items:center;justify-content:center;
-        gap:12px;padding:24px 24px 40px;text-align:center">
-        <div style="font-size:3.5rem;opacity:0.4">👥</div>
-        <h3>No groups yet</h3>
-        <p>Create a group or ask a friend to share an invite code.</p>
-        <button class="btn btn-primary" id="create-group-btn-empty">Create a group</button>
-      </div>
-      <div id="groups-list" class="hidden"
-           style="padding:12px;display:flex;flex-direction:column;gap:12px"></div>
-    </section>
+    </header>
 
-    <!-- ── CHAT ──────────────────────────────────────────── -->
-    <section id="screen-chat" class="screen" aria-label="Chat">
-      <!-- No groups state -->
-      <div id="chat-no-groups-state" class="chat-placeholder">
-        <div style="font-size:3.5rem">💬</div>
-        <h3>Chat lives in WhatsApp</h3>
-        <p style="max-width:280px;margin:0 auto">
-          Grouply doesn't replace WhatsApp. Join a group and tap
-          <strong>Open WhatsApp Group</strong> to jump straight into your chat.
-        </p>
-        <button class="btn btn-secondary" id="chat-go-groups">View my groups</button>
-      </div>
-      <!-- Groups with WhatsApp links -->
-      <div id="chat-groups-state" class="hidden">
-        <div style="padding:16px 16px 8px">
-          <h2>Your groups</h2>
-          <p style="font-size:0.85rem;margin-top:4px">Tap a group to open its WhatsApp chat.</p>
+    <!-- ── Tab Content Area ────────────────────────────────── -->
+    <main class="tab-content" id="tab-content">
+
+      <!-- ═════════════════════════════════════════════════════
+           1. FEED SCREEN
+      ═════════════════════════════════════════════════════════ -->
+      <section id="screen-feed" class="screen active" aria-label="Feed">
+        <div class="feed-container">
+
+          <!-- Post Creation Box -->
+          <div class="post-create-card card" id="feed-post-create-card">
+            <div class="card-header" style="padding-bottom:var(--space-2)">
+              <div style="display:flex;align-items:center;gap:var(--space-2)">
+                <div class="avatar avatar-sm" id="post-create-avatar" style="width:32px;height:32px;border-radius:50%;background:var(--accent-subtle);color:var(--brand-accent);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:0.8rem">?</div>
+                <span style="font-weight:600;font-size:0.9rem">Post to a group</span>
+              </div>
+              <select id="feed-post-group-select" class="input" style="width:auto;padding:4px 12px;font-size:0.85rem">
+                <option value="">Select Group...</option>
+              </select>
+            </div>
+            <div class="card-body" style="padding-top:0">
+              <textarea id="feed-post-caption" class="input" placeholder="Share an update or memory with your group..." rows="2" style="resize:vertical;min-height:54px"></textarea>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;margin-top:var(--space-3)">
+                <input id="feed-post-media" type="url" class="input" placeholder="Media image/photo URL (optional)" style="flex:1;min-width:200px;font-size:0.85rem" />
+                <label style="display:flex;align-items:center;gap:var(--space-2);font-size:0.82rem;color:var(--text-secondary);cursor:pointer">
+                  <input type="checkbox" id="feed-post-public" />
+                  <span>Public discovery</span>
+                </label>
+                <button class="btn btn-primary btn-sm" id="feed-post-submit">
+                  <span class="icon-wrap" data-icon="send"></span>
+                  <span>Post</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty Feed State -->
+          <div class="feed-empty" id="feed-empty">
+            <div class="empty-state-icon">
+              <span class="icon-wrap" data-icon="image"></span>
+            </div>
+            <h3>No group posts yet</h3>
+            <p>Posts, shared memories, and group announcements will appear here once you join or create a circle.</p>
+            <button class="btn btn-primary btn-sm" id="feed-go-groups" style="margin-top:var(--space-2)">Explore My Groups</button>
+          </div>
+
+          <!-- Feed Posts List -->
+          <div id="feed-list" class="hidden" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
+
         </div>
-        <div id="chat-groups-list"
-             style="padding:0 12px 16px;display:flex;flex-direction:column;gap:10px"></div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ── PROFILE ────────────────────────────────────────── -->
-    <section id="screen-profile" class="screen" aria-label="Profile">
-      <div class="profile-header">
-        <div class="avatar avatar-xl" id="profile-avatar">?</div>
-        <h2 id="profile-display-name">Loading…</h2>
-        <p id="profile-username" style="color:var(--text-muted)">@—</p>
-        <p id="profile-bio" style="max-width:300px;font-size:0.875rem"></p>
-        <div class="profile-stats">
-          <div class="profile-stat">
-            <span class="profile-stat-value" id="profile-groups-count">—</span>
-            <span class="profile-stat-label">Groups</span>
+      <!-- ═════════════════════════════════════════════════════
+           2. EXPLORE SCREEN
+      ═════════════════════════════════════════════════════ -->
+      <section id="screen-explore" class="screen" aria-label="Explore">
+        <div style="padding:var(--space-4);max-width:960px;margin:0 auto">
+
+          <!-- Search Input -->
+          <div style="margin-bottom:var(--space-4)">
+            <div style="position:relative">
+              <span class="icon-wrap" data-icon="search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-tertiary)"></span>
+              <input id="explore-search" type="search" class="input" placeholder="Search public groups and shared memories..." style="padding-left:42px" />
+            </div>
           </div>
-          <div class="profile-stat">
-            <span class="profile-stat-value" id="profile-admin-count">—</span>
-            <span class="profile-stat-label">Admin In</span>
+
+          <!-- Categories Title -->
+          <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="font-size:1.1rem;font-weight:700">Explore by Category</h2>
+            <button class="btn btn-ghost btn-sm" id="explore-cat-clear" style="font-size:0.8rem">Show all</button>
           </div>
-          <div class="profile-stat">
-            <span class="profile-stat-value" id="profile-categories-count">—</span>
-            <span class="profile-stat-label">Categories</span>
+
+          <!-- Category Tiles (Pinterest style cards, zero emojis) -->
+          <div class="explore-grid" id="explore-grid" style="margin-bottom:var(--space-6)">
+            <div class="category-tile" data-category="travel" style="background:linear-gradient(135deg,#1e3a5f,#2d6a4f)">
+              <span class="icon-wrap tile-icon" data-icon="compass"></span>
+              <span class="tile-name">Travel</span>
+            </div>
+            <div class="category-tile" data-category="sports" style="background:linear-gradient(135deg,#7f1d1d,#b45309)">
+              <span class="icon-wrap tile-icon" data-icon="award"></span>
+              <span class="tile-name">Sports</span>
+            </div>
+            <div class="category-tile" data-category="music" style="background:linear-gradient(135deg,#4c1d95,#6d28d9)">
+              <span class="icon-wrap tile-icon" data-icon="music"></span>
+              <span class="tile-name">Music</span>
+            </div>
+            <div class="category-tile" data-category="food" style="background:linear-gradient(135deg,#78350f,#dc2626)">
+              <span class="icon-wrap tile-icon" data-icon="coffee"></span>
+              <span class="tile-name">Food</span>
+            </div>
+            <div class="category-tile" data-category="gaming" style="background:linear-gradient(135deg,#064e3b,#065f46)">
+              <span class="icon-wrap tile-icon" data-icon="gamepad"></span>
+              <span class="tile-name">Gaming</span>
+            </div>
+            <div class="category-tile" data-category="art" style="background:linear-gradient(135deg,#831843,#9d174d)">
+              <span class="icon-wrap tile-icon" data-icon="image"></span>
+              <span class="tile-name">Art</span>
+            </div>
+            <div class="category-tile" data-category="outdoors" style="background:linear-gradient(135deg,#1e3a2f,#166534)">
+              <span class="icon-wrap tile-icon" data-icon="sun"></span>
+              <span class="tile-name">Outdoors</span>
+            </div>
+            <div class="category-tile" data-category="tech" style="background:linear-gradient(135deg,#172554,#1e40af)">
+              <span class="icon-wrap tile-icon" data-icon="code"></span>
+              <span class="tile-name">Tech</span>
+            </div>
           </div>
+
+          <!-- Explore Results Section -->
+          <div id="explore-results">
+            <h3 id="explore-results-title" style="margin-bottom:var(--space-3);font-size:1rem;font-weight:600">Discover Public Circles</h3>
+            <div id="explore-groups-list" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:var(--space-4);margin-bottom:var(--space-6)"></div>
+
+            <h3 id="explore-posts-title" style="margin-bottom:var(--space-3);font-size:1rem;font-weight:600">Public Memories</h3>
+            <div id="explore-posts-list" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:var(--space-4)"></div>
+          </div>
+
         </div>
-        <button class="btn btn-secondary" id="profile-edit-btn"
-                style="margin-top:4px;font-size:0.85rem;padding:9px 20px">
-          ✏️ Edit profile
-        </button>
-        <button class="btn btn-ghost" id="signout-btn"
-                style="color:var(--error);font-size:0.85rem">
-          Sign out
-        </button>
-      </div>
+      </section>
 
-      <!-- User's group cards — the "flex" -->
-      <div style="padding:0 16px 8px;display:flex;justify-content:space-between;align-items:center">
-        <h3>My Circles & Groups</h3>
-        <span id="profile-flex-tag" style="font-size:0.75rem;color:var(--brand-300);background:rgba(103,80,244,0.15);padding:3px 8px;border-radius:var(--radius-full)">The Flex 🏆</span>
-      </div>
-      <div id="profile-empty-groups" class="hidden" style="text-align:center;padding:32px 16px">
-        <div style="font-size:2.5rem;margin-bottom:8px">👥</div>
-        <p style="color:var(--text-muted);font-size:0.9rem">You haven't joined any groups yet.<br>Create or join a group to flex your circles!</p>
-      </div>
-      <div id="profile-groups-list"
-           style="padding:0 12px 16px;display:flex;flex-direction:column;gap:10px"></div>
-    </section>
+      <!-- ═════════════════════════════════════════════════════
+           3. GROUPS SCREEN
+      ═════════════════════════════════════════════════════ -->
+      <section id="screen-groups" class="screen" aria-label="Groups">
+        <div style="padding:var(--space-4);max-width:960px;margin:0 auto">
 
-  </div><!-- /tab-content -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+            <div>
+              <h2 style="font-size:1.25rem;font-weight:700">Your Circles</h2>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px">Dedicated spaces for your groups and shared memories</p>
+            </div>
+            <div style="display:flex;gap:var(--space-2)">
+              <button class="btn btn-secondary btn-sm" id="open-join-code-btn">
+                <span class="icon-wrap" data-icon="link"></span>
+                <span>Join with code</span>
+              </button>
+              <button class="btn btn-primary btn-sm" id="open-create-group-btn">
+                <span class="icon-wrap" data-icon="plus"></span>
+                <span>Create Group</span>
+              </button>
+            </div>
+          </div>
 
-  <!-- ── Bottom Tab Bar ──────────────────────────────────── -->
-  <nav class="tab-bar" aria-label="Main navigation">
-    <button class="tab-item active" data-tab="feed" id="tab-feed" aria-label="Feed">
-      <span class="tab-icon">🏠</span>
-      <span>Feed</span>
-    </button>
-    <button class="tab-item" data-tab="explore" id="tab-explore" aria-label="Explore">
-      <span class="tab-icon">🔭</span>
-      <span>Explore</span>
-    </button>
-    <button class="tab-item" data-tab="groups" id="tab-groups" aria-label="Groups">
-      <span class="tab-icon">👥</span>
-      <span>Groups</span>
-    </button>
-    <button class="tab-item" data-tab="chat" id="tab-chat" aria-label="Chat">
-      <span class="tab-icon">💬</span>
-      <span>Chat</span>
-    </button>
-    <button class="tab-item" data-tab="profile" id="tab-profile" aria-label="Profile">
-      <span class="tab-icon">👤</span>
-      <span>Profile</span>
-    </button>
-  </nav>
+          <!-- Empty Groups State -->
+          <div id="groups-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-3);padding:var(--space-12) var(--space-4);text-align:center">
+            <div class="empty-state-icon">
+              <span class="icon-wrap" data-icon="users"></span>
+            </div>
+            <h3>No groups yet</h3>
+            <p style="max-width:320px;color:var(--text-secondary);font-size:0.9rem">Create a circle for your friends, trip, or club, or join an existing group with an invite code.</p>
+            <div style="display:flex;gap:var(--space-3);margin-top:var(--space-2)">
+              <button class="btn btn-primary btn-sm" id="create-group-btn-empty">Create a group</button>
+              <button class="btn btn-secondary btn-sm" id="join-group-btn-empty">Join with code</button>
+            </div>
+          </div>
+
+          <!-- Groups Grid/List -->
+          <div id="groups-list" class="hidden" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:var(--space-4)"></div>
+
+        </div>
+      </section>
+
+      <!-- ═════════════════════════════════════════════════════
+           4. CHAT TAB
+      ═════════════════════════════════════════════════════ -->
+      <section id="screen-chat" class="screen" aria-label="Chat">
+        <div style="padding:var(--space-4);max-width:768px;margin:0 auto">
+
+          <div id="chat-no-groups-state" class="chat-placeholder">
+            <div class="empty-state-icon">
+              <span class="icon-wrap" data-icon="message-square"></span>
+            </div>
+            <h3>External Group Chats</h3>
+            <p style="max-width:320px;margin:0 auto;color:var(--text-secondary);font-size:0.9rem">
+              Grouply connects your circle to your existing WhatsApp, Discord, or Telegram groups so you never miss a conversation.
+            </p>
+            <button class="btn btn-secondary btn-sm" id="chat-go-groups" style="margin-top:var(--space-3)">View my groups</button>
+          </div>
+
+          <div id="chat-groups-state" class="hidden">
+            <div style="margin-bottom:var(--space-4)">
+              <h2 style="font-size:1.25rem;font-weight:700">Group Chats</h2>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px">Quickly launch into your group's connected communication platform.</p>
+            </div>
+            <div id="chat-groups-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═════════════════════════════════════════════════════
+           5. PROFILE SCREEN
+      ═════════════════════════════════════════════════════ -->
+      <section id="screen-profile" class="screen" aria-label="Profile">
+        <div style="padding:var(--space-4);max-width:680px;margin:0 auto">
+
+          <div class="profile-header card" style="margin-bottom:var(--space-4)">
+            <div class="avatar avatar-xl" id="profile-avatar" style="background:var(--accent-subtle);color:var(--brand-accent);font-size:2rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-3)">?</div>
+            <h2 id="profile-display-name" style="font-size:1.25rem;font-weight:700">Loading...</h2>
+            <p id="profile-username" style="color:var(--text-secondary);font-size:0.875rem">@—</p>
+            <p id="profile-bio" style="max-width:340px;margin:var(--space-2) auto 0;font-size:0.875rem;color:var(--text-secondary)"></p>
+
+            <div class="profile-stats">
+              <div class="profile-stat">
+                <span class="profile-stat-value" id="profile-groups-count">0</span>
+                <span class="profile-stat-label">Groups</span>
+              </div>
+              <div class="profile-stat">
+                <span class="profile-stat-value" id="profile-admin-count">0</span>
+                <span class="profile-stat-label">Admin In</span>
+              </div>
+              <div class="profile-stat">
+                <span class="profile-stat-value" id="profile-categories-count">0</span>
+                <span class="profile-stat-label">Categories</span>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:var(--space-2);justify-content:center;margin-top:var(--space-4);flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" id="profile-edit-btn">
+                <span class="icon-wrap" data-icon="edit"></span>
+                <span>Edit Profile</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="profile-theme-btn">
+                <span class="icon-wrap" data-icon="moon"></span>
+                <span id="profile-theme-label">Theme</span>
+              </button>
+              <button class="btn btn-ghost btn-sm" id="signout-btn" style="color:var(--danger)">
+                <span class="icon-wrap" data-icon="log-out"></span>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- User's group cards — The Flex -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
+            <h3 style="font-size:1rem;font-weight:700">My Circles & Affiliations</h3>
+            <span id="profile-flex-tag" class="badge badge-brand">Group Identity</span>
+          </div>
+
+          <div id="profile-empty-groups" class="hidden" style="text-align:center;padding:var(--space-8) var(--space-4)">
+            <p style="color:var(--text-secondary);font-size:0.9rem">You haven't joined any groups yet.<br>Create or join a group to build your group portfolio.</p>
+          </div>
+          <div id="profile-groups-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Mobile Bottom Navigation Bar ────────────────────── -->
+    <nav class="tab-bar" aria-label="Main navigation">
+      <button class="tab-item active" data-tab="feed" id="tab-feed" aria-label="Feed">
+        <span class="icon-wrap tab-icon" data-icon="home"></span>
+        <span>Feed</span>
+      </button>
+      <button class="tab-item" data-tab="explore" id="tab-explore" aria-label="Explore">
+        <span class="icon-wrap tab-icon" data-icon="compass"></span>
+        <span>Explore</span>
+      </button>
+      <button class="tab-item" data-tab="groups" id="tab-groups" aria-label="Groups">
+        <span class="icon-wrap tab-icon" data-icon="users"></span>
+        <span>Groups</span>
+      </button>
+      <button class="tab-item" data-tab="chat" id="tab-chat" aria-label="Chat">
+        <span class="icon-wrap tab-icon" data-icon="message-square"></span>
+        <span>Chat</span>
+      </button>
+      <button class="tab-item" data-tab="profile" id="tab-profile" aria-label="Profile">
+        <span class="icon-wrap tab-icon" data-icon="user"></span>
+        <span>Profile</span>
+      </button>
+    </nav>
+
+  </div><!-- /app-main -->
 
 </div><!-- /app-shell -->
 
 <!-- ═══════════════════════════════════════════════════════════
-     CREATE GROUP BOTTOM SHEET
+     FAB: CREATE GROUP (visible on Groups tab)
 ══════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="create-group-modal" role="dialog"
-     aria-modal="true" aria-label="Create New Group">
-  <div class="bottom-sheet">
+<button class="fab hidden" id="fab-create-group" aria-label="Create new group">
+  <span class="icon-wrap" data-icon="plus"></span>
+</button>
+
+<!-- ═══════════════════════════════════════════════════════════
+     GROUP DETAIL MODAL & DEDICATED SECTIONS
+     Sub-Tabs: Feed | Archive | Polls | Expenses | Decisions | Members | Links
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="group-detail-modal" role="dialog" aria-modal="true" aria-label="Group details">
+  <div class="bottom-sheet" style="max-height:92dvh;max-width:840px">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-header" style="border-bottom:none;padding-bottom:0">
+      <span class="sheet-title" id="gd-title">Group Details</span>
+      <button class="sheet-close" id="group-detail-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+
+    <!-- Cover / Hero -->
+    <div id="gd-cover" style="height:120px;background:var(--brand-accent);display:flex;align-items:flex-end;padding:var(--space-3) var(--space-4);gap:var(--space-3);flex-shrink:0;border-radius:var(--radius-lg);margin:0 var(--space-4) var(--space-3)">
+      <div class="avatar avatar-lg" id="gd-avatar" style="background:rgba(255,255,255,0.2);color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700">
+        <span class="icon-wrap" id="gd-category-icon" data-icon="users"></span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div id="gd-name" style="font-weight:700;font-size:1.2rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Group Name</div>
+        <div id="gd-category-label" style="font-size:0.75rem;color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.05em">Category</div>
+      </div>
+    </div>
+
+    <!-- Meta badges row -->
+    <div style="padding:0 var(--space-4);display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center">
+      <span class="badge badge-brand" id="gd-privacy-badge">Private</span>
+      <span class="badge badge-neutral" id="gd-member-badge">0 members</span>
+      <span class="badge badge-neutral" id="gd-role-badge" style="display:none">Admin</span>
+      <p id="gd-description" style="font-size:0.875rem;color:var(--text-secondary);width:100%;margin-top:var(--space-2);display:none"></p>
+    </div>
+
+    <!-- Group Sub-Navigation Tabs -->
+    <div class="group-subnav" style="display:flex;overflow-x:auto;padding:var(--space-3) var(--space-4) 0;border-bottom:1px solid var(--border-subtle);gap:var(--space-2);margin-top:var(--space-2)">
+      <button class="subnav-tab active" data-subtab="feed" id="subtab-feed">Feed</button>
+      <button class="subnav-tab" data-subtab="archive" id="subtab-archive">Archive</button>
+      <button class="subnav-tab" data-subtab="polls" id="subtab-polls">Polls</button>
+      <button class="subnav-tab" data-subtab="expenses" id="subtab-expenses">Expenses</button>
+      <button class="subnav-tab" data-subtab="decisions" id="subtab-decisions">Decisions</button>
+      <button class="subnav-tab" data-subtab="members" id="subtab-members">Members</button>
+      <button class="subnav-tab" data-subtab="links" id="subtab-links">Links</button>
+    </div>
+
+    <!-- Sub-tab Panels -->
+    <div class="sheet-body" style="padding:var(--space-4);overflow-y:auto;max-height:calc(92dvh - 280px)">
+
+      <!-- PANEL 1: Group Feed -->
+      <div class="subnav-panel active" id="gd-panel-feed">
+        <div class="card" style="padding:var(--space-3);margin-bottom:var(--space-3)">
+          <textarea id="gd-post-caption" class="input" placeholder="Share a memory or post to this circle..." rows="2" style="min-height:50px"></textarea>
+          <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
+            <input id="gd-post-media" type="url" class="input" placeholder="Image/Media URL (optional)" style="flex:1;min-width:180px;font-size:0.85rem" />
+            <button class="btn btn-primary btn-sm" id="gd-post-submit">Post</button>
+          </div>
+        </div>
+        <div id="gd-feed-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+      </div>
+
+      <!-- PANEL 2: Shared Archive & Google Drive -->
+      <div class="subnav-panel hidden" id="gd-panel-archive">
+        <!-- Google Drive Folder Connection Card -->
+        <div class="card" style="padding:var(--space-4);margin-bottom:var(--space-4);background:var(--bg-secondary)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">
+            <div style="display:flex;align-items:center;gap:var(--space-2)">
+              <span class="icon-wrap" data-icon="folder" style="color:var(--brand-accent)"></span>
+              <span style="font-weight:700;font-size:0.95rem">Google Drive Archive Folder</span>
+            </div>
+            <span class="badge badge-neutral" id="gd-drive-status">Not connected</span>
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:var(--space-3)">
+            Link an existing Google Drive folder where group members can access and contribute full-resolution photos, raw videos, and documents.
+          </p>
+          <div id="gd-drive-connected-view" class="hidden" style="margin-bottom:var(--space-3)">
+            <a id="gd-drive-launch-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:var(--space-2)">
+              <span class="icon-wrap" data-icon="external-link"></span>
+              <span>Open Google Drive Folder</span>
+            </a>
+          </div>
+          <!-- Admin set drive link -->
+          <div id="gd-drive-edit-view" style="display:flex;gap:var(--space-2)">
+            <input id="gd-drive-link-input" type="url" class="input" placeholder="https://drive.google.com/drive/folders/..." style="font-size:0.85rem" />
+            <button class="btn btn-secondary btn-sm" id="gd-drive-save-btn">Save</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
+          <h4 style="font-size:0.95rem;font-weight:700">Shared Archive Files</h4>
+          <button class="btn btn-secondary btn-sm" id="gd-add-archive-btn">
+            <span class="icon-wrap" data-icon="plus"></span>
+            <span>Add Item</span>
+          </button>
+        </div>
+        <div id="gd-archive-list" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:var(--space-3)"></div>
+      </div>
+
+      <!-- PANEL 3: Polls -->
+      <div class="subnav-panel hidden" id="gd-panel-polls">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4)">
+          <div>
+            <h4 style="font-size:0.95rem;font-weight:700">Group Polls</h4>
+            <p style="font-size:0.8rem;color:var(--text-secondary)">Cast your vote on group decisions and plans</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="gd-create-poll-btn">
+            <span class="icon-wrap" data-icon="plus"></span>
+            <span>Create Poll</span>
+          </button>
+        </div>
+        <div id="gd-polls-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+      </div>
+
+      <!-- PANEL 4: Expenses & Settlements -->
+      <div class="subnav-panel hidden" id="gd-panel-expenses">
+        <!-- Financial Summary Banner -->
+        <div class="card" style="padding:var(--space-4);margin-bottom:var(--space-4);background:var(--bg-secondary)">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:var(--space-3);text-align:center">
+            <div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase">Total Expenses</div>
+              <div id="gd-exp-total" style="font-size:1.25rem;font-weight:800;color:var(--text-primary);margin-top:2px">$0.00</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase">You Paid</div>
+              <div id="gd-exp-paid" style="font-size:1.25rem;font-weight:800;color:var(--success);margin-top:2px">$0.00</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase">Your Net Balance</div>
+              <div id="gd-exp-net" style="font-size:1.25rem;font-weight:800;color:var(--brand-accent);margin-top:2px">$0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settlement Recommendations -->
+        <div class="card" style="padding:var(--space-3);margin-bottom:var(--space-4);border-left:3px solid var(--brand-accent)">
+          <div style="font-size:0.85rem;font-weight:700;margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-2)">
+            <span class="icon-wrap" data-icon="check-circle" style="color:var(--brand-accent)"></span>
+            <span>Suggested Settlements (Who owes whom)</span>
+          </div>
+          <div id="gd-settlements-list" style="display:flex;flex-direction:column;gap:var(--space-2);font-size:0.85rem"></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
+          <h4 style="font-size:0.95rem;font-weight:700">Expense Log</h4>
+          <button class="btn btn-primary btn-sm" id="gd-add-expense-btn">
+            <span class="icon-wrap" data-icon="plus"></span>
+            <span>Add Expense</span>
+          </button>
+        </div>
+        <div id="gd-expenses-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+      </div>
+
+      <!-- PANEL 5: Decisions & Voting (Proposals) -->
+      <div class="subnav-panel hidden" id="gd-panel-decisions">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4)">
+          <div>
+            <h4 style="font-size:0.95rem;font-weight:700">Collective Decisions</h4>
+            <p style="font-size:0.8rem;color:var(--text-secondary)">Proposals requiring &gt; 50% group approval</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="gd-propose-btn">
+            <span class="icon-wrap" data-icon="plus"></span>
+            <span>Propose Decision</span>
+          </button>
+        </div>
+        <div id="gd-decisions-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+      </div>
+
+      <!-- PANEL 6: Members -->
+      <div class="subnav-panel hidden" id="gd-panel-members">
+        <!-- Invite Generator Card -->
+        <div class="card" style="padding:var(--space-3);margin-bottom:var(--space-4);background:var(--bg-secondary)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap">
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Invite New Members</div>
+              <div style="font-size:0.8rem;color:var(--text-secondary)">Share an 8-character invite code valid for 7 days</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="gd-invite-btn">
+              <span class="icon-wrap" data-icon="link"></span>
+              <span>Generate Code</span>
+            </button>
+          </div>
+          <div id="gd-invite-result" class="hidden" style="margin-top:var(--space-3);display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--bg-card);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
+            <code id="gd-invite-code" style="font-size:1.1rem;font-weight:700;letter-spacing:0.15em;color:var(--brand-accent);flex:1"></code>
+            <button class="btn btn-ghost btn-sm" id="gd-copy-btn">Copy</button>
+          </div>
+        </div>
+
+        <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:var(--space-3)">Current Members</h4>
+        <div id="gd-members-list" style="display:flex;flex-direction:column;gap:var(--space-2)"></div>
+      </div>
+
+      <!-- PANEL 7: External Links -->
+      <div class="subnav-panel hidden" id="gd-panel-links">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4)">
+          <div>
+            <h4 style="font-size:0.95rem;font-weight:700">Connected Group Spaces</h4>
+            <p style="font-size:0.8rem;color:var(--text-secondary)">Links to WhatsApp, Discord, Telegram, or Google Drive</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="gd-add-link-btn">
+            <span class="icon-wrap" data-icon="plus"></span>
+            <span>Add Link</span>
+          </button>
+        </div>
+        <div id="gd-links-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+      </div>
+
+    </div><!-- /sheet-body -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: CREATE GROUP
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="create-group-modal" role="dialog" aria-modal="true" aria-label="Create New Group">
+  <div class="bottom-sheet" style="max-width:540px">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <span class="sheet-title">Create New Group</span>
-      <button class="sheet-close" id="create-group-close" aria-label="Close">✕</button>
+      <span class="sheet-title">Create New Circle</span>
+      <button class="sheet-close" id="create-group-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
     </div>
     <div class="sheet-body">
       <div id="create-group-alert" class="alert" role="alert" aria-live="polite"></div>
 
       <div class="input-group">
-        <label for="cg-name">Group name <span style="color:var(--error)">*</span></label>
-        <input id="cg-name" type="text" class="input"
-               placeholder="e.g. Summer '25 Crew" maxlength="80" required />
+        <label for="cg-name">Group Name <span style="color:var(--danger)">*</span></label>
+        <input id="cg-name" type="text" class="input" placeholder="e.g. Goa Trip 2026, Design Club" maxlength="80" required />
         <span class="form-error" id="cg-name-err"></span>
       </div>
 
       <div class="input-group">
         <label for="cg-desc">Description</label>
-        <textarea id="cg-desc" class="input"
-                  placeholder="What's this group about?"
-                  rows="2" style="resize:vertical;min-height:56px"></textarea>
+        <textarea id="cg-desc" class="input" placeholder="What brings this group together?" rows="2" style="resize:vertical;min-height:56px"></textarea>
       </div>
 
       <div class="input-group">
         <label for="cg-category">Category</label>
-        <select id="cg-category" class="input"
-                style="appearance:none;-webkit-appearance:none;cursor:pointer">
-          <option value="">— Select category —</option>
-          <option value="travel">✈️ Travel</option>
-          <option value="sports">⚽ Sports</option>
-          <option value="music">🎵 Music</option>
-          <option value="food">🍕 Food</option>
-          <option value="gaming">🎮 Gaming</option>
-          <option value="art">🎨 Art</option>
-          <option value="outdoors">🏔️ Outdoors</option>
-          <option value="tech">💻 Tech</option>
-          <option value="other">📦 Other</option>
+        <select id="cg-category" class="input" style="cursor:pointer">
+          <option value="">Select Category...</option>
+          <option value="travel">Travel</option>
+          <option value="sports">Sports</option>
+          <option value="music">Music</option>
+          <option value="food">Food</option>
+          <option value="gaming">Gaming</option>
+          <option value="art">Art</option>
+          <option value="outdoors">Outdoors</option>
+          <option value="tech">Tech</option>
+          <option value="other">Other</option>
         </select>
       </div>
 
       <div class="toggle-row">
         <div>
-          <div class="toggle-label">Private group</div>
-          <div class="toggle-desc">Only invited members can join</div>
+          <div class="toggle-label">Private circle</div>
+          <div class="toggle-desc">Only invited members can view and participate</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cg-private" checked />
@@ -287,161 +656,280 @@
         </label>
       </div>
 
-      <button class="btn btn-primary btn-full" id="create-group-submit">
-        Create Group 🎉
+      <button class="btn btn-primary btn-full" id="create-group-submit" style="margin-top:var(--space-2)">
+        Create Circle
       </button>
     </div>
   </div>
 </div>
 
-<!-- FAB: create group (visible on Groups tab) -->
-<button class="fab hidden" id="fab-create-group" aria-label="Create new group">＋</button>
-
 <!-- ═══════════════════════════════════════════════════════════
-     GROUP DETAIL BOTTOM SHEET
+     MODAL: JOIN BY CODE
 ══════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="group-detail-modal" role="dialog"
-     aria-modal="true" aria-label="Group details">
-  <div class="bottom-sheet" style="max-height:88dvh">
+<div class="modal-overlay" id="join-code-modal" role="dialog" aria-modal="true" aria-label="Join group by invite code">
+  <div class="bottom-sheet" style="max-width:480px">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <span class="sheet-title" id="gd-title">Group</span>
-      <button class="sheet-close" id="group-detail-close" aria-label="Close">✕</button>
-    </div>
-
-    <!-- Cover / hero -->
-    <div id="gd-cover" style="
-      height:120px;
-      background:linear-gradient(135deg,var(--brand-700),#a855f7);
-      display:flex;align-items:flex-end;
-      padding:12px 20px;gap:8px;flex-shrink:0">
-      <span id="gd-category-emoji" style="font-size:2rem"></span>
-      <div>
-        <div id="gd-name" style="font-weight:800;font-size:1.1rem;color:#fff"></div>
-        <div id="gd-category-label"
-             style="font-size:0.75rem;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.05em"></div>
-      </div>
-    </div>
-
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto">
-
-      <!-- Meta row -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <span class="badge badge-brand" id="gd-privacy-badge">Private</span>
-        <span class="badge badge-muted" id="gd-member-badge">0 members</span>
-        <span class="badge badge-muted" id="gd-role-badge" style="display:none">Admin</span>
-      </div>
-
-      <!-- Description -->
-      <p id="gd-description" style="font-size:0.9rem;color:var(--text-secondary);display:none"></p>
-
-      <!-- Action buttons -->
-      <div style="display:flex;flex-direction:column;gap:10px">
-
-        <!-- WhatsApp link (if set) -->
-        <a id="gd-whatsapp-btn" href="#" target="_blank" rel="noopener noreferrer"
-           class="btn btn-secondary btn-full hidden"
-           style="text-decoration:none;justify-content:flex-start;gap:12px">
-          <span style="font-size:1.3rem">💬</span>
-          Open WhatsApp Group
-        </a>
-
-        <!-- Invite link (members can generate) -->
-        <button class="btn btn-secondary btn-full" id="gd-invite-btn"
-                style="justify-content:flex-start;gap:12px">
-          <span style="font-size:1.2rem">🔗</span>
-          Generate Invite Link
-        </button>
-
-        <!-- Invite result (shown after generating) -->
-        <div id="gd-invite-result" class="hidden"
-             style="background:var(--bg-input);border:1px solid var(--border-glass);
-                    border-radius:var(--radius-md);padding:12px 14px">
-          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;
-                      text-transform:uppercase;letter-spacing:0.05em">Invite code (expires 7 days)</div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <code id="gd-invite-code"
-                  style="font-size:1.2rem;font-weight:700;letter-spacing:0.12em;
-                         color:var(--brand-300);flex:1"></code>
-            <button class="btn btn-ghost" id="gd-copy-btn"
-                    style="padding:6px 10px;font-size:0.8rem">Copy</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Members list -->
-      <div>
-        <h3 style="margin-bottom:10px">Members</h3>
-        <div id="gd-members-list"
-             style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-
-    </div><!-- /scroll area -->
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     JOIN BY CODE BOTTOM SHEET
-══════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="join-code-modal" role="dialog"
-     aria-modal="true" aria-label="Join group by invite code">
-  <div class="bottom-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-header">
-      <span class="sheet-title">Join with invite code</span>
-      <button class="sheet-close" id="join-code-close" aria-label="Close">✕</button>
+      <span class="sheet-title">Join With Invite Code</span>
+      <button class="sheet-close" id="join-code-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
     </div>
     <div class="sheet-body">
-      <p style="color:var(--text-secondary);font-size:0.9rem">
-        Enter the 8-character invite code shared with you.
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:var(--space-3)">
+        Enter the 8-character invitation code shared with you by a group member.
       </p>
 
       <div id="join-code-alert" class="alert" role="alert" aria-live="polite"></div>
 
       <div class="input-group">
-        <label for="join-code-input">Invite code</label>
-        <input id="join-code-input" type="text" class="input"
-               placeholder="e.g. AB3XY7PQ"
-               maxlength="8"
-               autocomplete="off"
-               style="text-transform:uppercase;letter-spacing:0.15em;font-size:1.2rem;
-                      text-align:center;font-weight:700" />
+        <label for="join-code-input">Invite Code</label>
+        <input id="join-code-input" type="text" class="input" placeholder="e.g. AB3XY7PQ" maxlength="8" autocomplete="off" style="text-transform:uppercase;letter-spacing:0.18em;font-size:1.25rem;text-align:center;font-weight:700" />
       </div>
 
-      <button class="btn btn-primary btn-full" id="join-code-submit">
-        Join Group 🚀
+      <button class="btn btn-primary btn-full" id="join-code-submit" style="margin-top:var(--space-3)">
+        Join Circle
       </button>
+    </div>
+  </div>
+</div>
 
-      <div style="text-align:center">
-        <button class="btn btn-ghost" id="join-code-close-link"
-                style="font-size:0.85rem">Cancel</button>
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: CREATE POLL
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="create-poll-modal" role="dialog" aria-modal="true" aria-label="Create Poll">
+  <div class="bottom-sheet" style="max-width:520px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Create Group Poll</span>
+      <button class="sheet-close" id="create-poll-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="create-poll-alert" class="alert" role="alert" aria-live="polite"></div>
+
+      <div class="input-group">
+        <label for="poll-question">Poll Question <span style="color:var(--danger)">*</span></label>
+        <input id="poll-question" type="text" class="input" placeholder="e.g. Where should we have dinner Saturday?" required />
+      </div>
+
+      <div class="input-group">
+        <label>Answer Options (minimum 2)</label>
+        <div id="poll-options-container" style="display:flex;flex-direction:column;gap:var(--space-2)">
+          <input type="text" class="input poll-opt-input" placeholder="Option 1" />
+          <input type="text" class="input poll-opt-input" placeholder="Option 2" />
+        </div>
+        <button class="btn btn-ghost btn-sm" id="poll-add-opt-btn" style="margin-top:var(--space-2);align-self:flex-start">
+          <span class="icon-wrap" data-icon="plus"></span>
+          <span>Add option</span>
+        </button>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="create-poll-submit" style="margin-top:var(--space-3)">
+        Launch Poll
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: ADD EXPENSE
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="add-expense-modal" role="dialog" aria-modal="true" aria-label="Add Expense">
+  <div class="bottom-sheet" style="max-width:540px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Add Group Expense</span>
+      <button class="sheet-close" id="add-expense-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="add-expense-alert" class="alert" role="alert" aria-live="polite"></div>
+
+      <div class="input-group">
+        <label for="exp-desc">Description <span style="color:var(--danger)">*</span></label>
+        <input id="exp-desc" type="text" class="input" placeholder="e.g. Airbnb stay, Groceries, Gas" required />
+      </div>
+
+      <div style="display:flex;gap:var(--space-3)">
+        <div class="input-group" style="flex:1">
+          <label for="exp-amount">Amount <span style="color:var(--danger)">*</span></label>
+          <input id="exp-amount" type="number" step="0.01" min="0.01" class="input" placeholder="0.00" required />
+        </div>
+        <div class="input-group" style="width:110px">
+          <label for="exp-currency">Currency</label>
+          <select id="exp-currency" class="input">
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="INR">INR (₹)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="exp-payer">Paid By</label>
+        <select id="exp-payer" class="input"></select>
+      </div>
+
+      <div class="input-group">
+        <label>Split Type</label>
+        <div style="display:flex;gap:var(--space-3)">
+          <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:0.875rem">
+            <input type="radio" name="exp-split-type" value="equal" checked />
+            <span>Split Equally</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:0.875rem">
+            <input type="radio" name="exp-split-type" value="custom" />
+            <span>Custom Split</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Included Members</label>
+        <div id="exp-members-picker" style="display:flex;flex-direction:column;gap:var(--space-2);max-height:160px;overflow-y:auto;padding:var(--space-2);background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border-subtle)"></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="add-expense-submit" style="margin-top:var(--space-3)">
+        Save Expense
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: PROPOSE DECISION
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="propose-decision-modal" role="dialog" aria-modal="true" aria-label="Propose Decision">
+  <div class="bottom-sheet" style="max-width:520px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Propose Group Decision</span>
+      <button class="sheet-close" id="propose-decision-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="propose-decision-alert" class="alert" role="alert" aria-live="polite"></div>
+
+      <div class="input-group">
+        <label for="prop-type">Proposal Type</label>
+        <select id="prop-type" class="input">
+          <option value="add_member">Add Member</option>
+          <option value="remove_member">Remove Member</option>
+          <option value="publish_post">Publish Post to Public Discovery</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="prop-title">Title / Summary <span style="color:var(--danger)">*</span></label>
+        <input id="prop-title" type="text" class="input" placeholder="e.g. Invite Jordan to the group" required />
+      </div>
+
+      <div class="input-group">
+        <label for="prop-desc">Context & Details</label>
+        <textarea id="prop-desc" class="input" placeholder="Explain the rationale behind this proposal..." rows="2" style="min-height:56px"></textarea>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="propose-decision-submit" style="margin-top:var(--space-3)">
+        Submit Proposal
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: ADD LINK
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="add-link-modal" role="dialog" aria-modal="true" aria-label="Add External Link">
+  <div class="bottom-sheet" style="max-width:480px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Add External Link</span>
+      <button class="sheet-close" id="add-link-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="add-link-alert" class="alert" role="alert" aria-live="polite"></div>
+
+      <div class="input-group">
+        <label for="link-platform">Platform</label>
+        <select id="link-platform" class="input">
+          <option value="whatsapp">WhatsApp</option>
+          <option value="discord">Discord</option>
+          <option value="telegram">Telegram</option>
+          <option value="instagram">Instagram</option>
+          <option value="drive">Google Drive</option>
+          <option value="other">Other Link</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="link-title">Title / Name</label>
+        <input id="link-title" type="text" class="input" placeholder="e.g. Main WhatsApp Group" />
+      </div>
+
+      <div class="input-group">
+        <label for="link-url">URL <span style="color:var(--danger)">*</span></label>
+        <input id="link-url" type="url" class="input" placeholder="https://chat.whatsapp.com/..." required />
+      </div>
+
+      <button class="btn btn-primary btn-full" id="add-link-submit" style="margin-top:var(--space-3)">
+        Save Link
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: COMMENTS
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="comments-modal" role="dialog" aria-modal="true" aria-label="Post Comments">
+  <div class="bottom-sheet" style="max-height:85dvh;max-width:580px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Comments</span>
+      <button class="sheet-close" id="comments-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+    <div class="sheet-body" style="display:flex;flex-direction:column;max-height:calc(85dvh - 120px)">
+      <div id="comments-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-2) 0"></div>
+      <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);padding-top:var(--space-2);border-top:1px solid var(--border-subtle)">
+        <input id="comment-input" type="text" class="input" placeholder="Write a comment..." style="flex:1" />
+        <button class="btn btn-primary btn-sm" id="comment-submit">Post</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
-     EDIT PROFILE BOTTOM SHEET (Milestone 3)
+     MODAL: EDIT PROFILE
 ══════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="edit-profile-modal" role="dialog"
-     aria-modal="true" aria-label="Edit Profile">
-  <div class="bottom-sheet" style="max-height:88dvh">
+<div class="modal-overlay" id="edit-profile-modal" role="dialog" aria-modal="true" aria-label="Edit Profile">
+  <div class="bottom-sheet" style="max-height:88dvh;max-width:520px">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
       <span class="sheet-title">Edit Profile</span>
-      <button class="sheet-close" id="edit-profile-close" aria-label="Close">✕</button>
+      <button class="sheet-close" id="edit-profile-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
     </div>
     <div class="sheet-body">
       <div id="edit-profile-alert" class="alert" role="alert" aria-live="polite"></div>
 
       <div class="input-group">
-        <label for="ep-display-name">Display Name <span style="color:var(--error)">*</span></label>
+        <label for="ep-display-name">Display Name <span style="color:var(--danger)">*</span></label>
         <input id="ep-display-name" type="text" class="input" placeholder="Your name or nickname" maxlength="50" required />
         <span class="form-error" id="ep-display-name-err"></span>
       </div>
 
       <div class="input-group">
-        <label for="ep-username">Username <span style="color:var(--error)">*</span></label>
+        <label for="ep-username">Username <span style="color:var(--danger)">*</span></label>
         <input id="ep-username" type="text" class="input" placeholder="e.g. alex_runner" maxlength="30" autocapitalize="none" required />
         <span class="form-error" id="ep-username-err"></span>
       </div>
@@ -456,40 +944,37 @@
         <input id="ep-avatar-url" type="url" class="input" placeholder="https://example.com/avatar.jpg" />
       </div>
 
-      <button class="btn btn-primary btn-full" id="edit-profile-submit">
+      <button class="btn btn-primary btn-full" id="edit-profile-submit" style="margin-top:var(--space-2)">
         Save Changes
       </button>
-
-      <div style="text-align:center">
-        <button class="btn btn-ghost" id="edit-profile-cancel-btn" style="font-size:0.85rem">Cancel</button>
-      </div>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
-     MEMBER PROFILE MODAL (Milestone 3 — Viewing others' "flex")
+     MODAL: MEMBER PROFILE (Viewing others' circles & flex)
 ══════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="user-profile-modal" role="dialog"
-     aria-modal="true" aria-label="Member Profile">
-  <div class="bottom-sheet" style="max-height:88dvh">
+<div class="modal-overlay" id="user-profile-modal" role="dialog" aria-modal="true" aria-label="Member Profile">
+  <div class="bottom-sheet" style="max-height:88dvh;max-width:540px">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
       <span class="sheet-title">Member Profile</span>
-      <button class="sheet-close" id="user-profile-close" aria-label="Close">✕</button>
+      <button class="sheet-close" id="user-profile-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
     </div>
-    <div class="sheet-body" style="overflow-y:auto;max-height:calc(88dvh - 70px);padding-bottom:24px">
-      <div id="user-profile-loading" style="text-align:center;padding:40px 0">
+    <div class="sheet-body" style="overflow-y:auto;max-height:calc(88dvh - 70px);padding-bottom:var(--space-6)">
+      <div id="user-profile-loading" style="text-align:center;padding:var(--space-8) 0">
         <span class="spinner" style="width:28px;height:28px;margin:0 auto"></span>
       </div>
 
       <div id="user-profile-content" class="hidden">
-        <div class="profile-header" style="padding-top:8px;padding-bottom:16px">
-          <div class="avatar avatar-xl" id="up-avatar">?</div>
-          <h2 id="up-display-name">Name</h2>
-          <p id="up-username" style="color:var(--text-muted)">@username</p>
-          <p id="up-bio" style="max-width:300px;font-size:0.875rem;margin-top:4px"></p>
-          <div class="profile-stats" style="margin-top:12px">
+        <div class="profile-header" style="padding-top:var(--space-2);padding-bottom:var(--space-4)">
+          <div class="avatar avatar-xl" id="up-avatar" style="background:var(--accent-subtle);color:var(--brand-accent);font-size:2rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-3)">?</div>
+          <h2 id="up-display-name" style="font-size:1.25rem;font-weight:700">Name</h2>
+          <p id="up-username" style="color:var(--text-secondary);font-size:0.875rem">@username</p>
+          <p id="up-bio" style="max-width:320px;font-size:0.875rem;margin:var(--space-2) auto 0;color:var(--text-secondary)"></p>
+          <div class="profile-stats" style="margin-top:var(--space-4)">
             <div class="profile-stat">
               <span class="profile-stat-value" id="up-groups-count">0</span>
               <span class="profile-stat-label">Total Groups</span>
@@ -501,16 +986,17 @@
           </div>
         </div>
 
-        <div style="padding:8px 0 6px">
-          <h3 id="up-groups-heading">Groups & Circles (The Flex)</h3>
+        <div style="padding:var(--space-3) 0 var(--space-2)">
+          <h3 id="up-groups-heading" style="font-size:0.95rem;font-weight:700">Circles & Affiliations</h3>
         </div>
-        <div id="up-groups-list" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div id="up-groups-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ── Scripts ────────────────────────────────────────────── -->
+<script type="module" src="js/icons.js"></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

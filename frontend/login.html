@@ -9,8 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="css/style.css" />
 
-  <!-- 🔧 CONFIG — replace values after pasting into Supabase -->
   <script>
+    // Theme initialization before paint to prevent theme flash
+    (function() {
+      const savedTheme = localStorage.getItem('grouply_theme') || 'system';
+      const isDark = savedTheme === 'dark' || (savedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    })();
+
     window.GROUPLY_CONFIG = {
       SUPABASE_URL:     "https://bhpunicptjxvfyeqdkak.supabase.co",
       SUPABASE_ANON_KEY:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocHVuaWNwdGp4dmZ5ZXFka2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxOTQ1MzEsImV4cCI6MjEwODc3MDUzMX0.2RtwNBFqKexFlnAleo_JdxURI2b0WPKXPCaAX8XjId4",
@@ -19,195 +25,238 @@
                           : "https://grouply-backend.onrender.com",
     };
   </script>
+
+  <style>
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      background: var(--bg-secondary);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: 36px 32px;
+      box-shadow: var(--shadow-md);
+    }
+    .auth-brand {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .auth-brand-name {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--brand);
+    }
+    .auth-brand-tagline {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .auth-panel {
+      display: none;
+    }
+    .auth-panel.active {
+      display: block;
+    }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .auth-divider::before { margin-right: 12px; }
+    .auth-divider::after { margin-left: 12px; }
+    .auth-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+    }
+  </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
-     AUTH PAGE
-     Panels: login | signup | forgot | reset
-══════════════════════════════════════════════════════════════ -->
-<main class="auth-page" id="auth-page">
+<main class="auth-container">
+  <div class="auth-card">
 
-  <!-- Decorative background blobs -->
-  <div aria-hidden="true" style="
-    position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0">
-    <div style="
-      position:absolute;top:-120px;left:-80px;
-      width:400px;height:400px;border-radius:50%;
-      background:radial-gradient(circle,rgba(103,80,244,0.22) 0%,transparent 70%);
-      filter:blur(40px)"></div>
-    <div style="
-      position:absolute;bottom:-60px;right:-60px;
-      width:320px;height:320px;border-radius:50%;
-      background:radial-gradient(circle,rgba(34,211,238,0.15) 0%,transparent 70%);
-      filter:blur(40px)"></div>
-  </div>
-
-  <div class="auth-card glass" style="position:relative;z-index:1">
-
-    <!-- Logo -->
-    <div class="auth-logo">
-      <div class="logo-text">Grouply</div>
-      <div class="logo-tagline">Where groups share everything</div>
+    <div class="auth-brand">
+      <div class="auth-brand-name">Grouply</div>
+      <div class="auth-brand-tagline">Where groups share everything</div>
     </div>
 
-    <!-- Global alert -->
+    <!-- Alert Banner -->
     <div id="auth-alert" class="alert" role="alert" aria-live="polite"></div>
 
-    <!-- ── Panel: LOGIN ───────────────────────────────────── -->
+    <!-- ── LOGIN PANEL ────────────────────────────────────── -->
     <div id="panel-login" class="auth-panel active">
-      <h2 style="text-align:center;margin-bottom:4px">Welcome back</h2>
-      <p style="text-align:center;margin-bottom:8px">Sign in to your account</p>
+      <h2 style="text-align:center;margin-bottom:6px">Welcome back</h2>
+      <p style="text-align:center;margin-bottom:20px;font-size:0.88rem">Sign in to your group spaces</p>
+
+      <!-- Google Sign In Button -->
+      <button class="btn btn-google btn-full" id="google-signin-btn" type="button" style="margin-bottom:12px">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-divider">or sign in with email</div>
 
       <form id="login-form" class="auth-form" novalidate>
         <div class="input-group">
-          <label for="login-email">Email</label>
-          <input id="login-email" type="email" class="input"
-                 placeholder="you@example.com" autocomplete="email" required />
+          <label for="login-email">Email address</label>
+          <input id="login-email" type="email" class="input" placeholder="name@example.com" autocomplete="email" required />
           <span class="form-error" id="login-email-err"></span>
         </div>
 
         <div class="input-group">
           <label for="login-password">Password</label>
           <div class="input-wrapper">
-            <input id="login-password" type="password" class="input"
-                   placeholder="••••••••" autocomplete="current-password" required />
-            <button type="button" class="input-icon" id="login-pw-toggle"
-                    aria-label="Toggle password visibility">👁</button>
+            <input id="login-password" type="password" class="input" placeholder="Enter password" autocomplete="current-password" required />
+            <button type="button" class="input-icon" id="login-pw-toggle" aria-label="Toggle password visibility">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
           <span class="form-error" id="login-pw-err"></span>
         </div>
 
-        <div style="text-align:right">
-          <button type="button" class="btn btn-ghost" id="goto-forgot"
-                  style="padding:4px 0;font-size:0.82rem">Forgot password?</button>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+          <button type="button" class="btn btn-ghost" id="goto-forgot" style="padding:0;font-size:0.82rem">Forgot password?</button>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full" id="login-submit">
-          Sign in
+          Sign In
         </button>
       </form>
 
-      <div class="divider">or</div>
-
-      <button class="btn btn-google btn-full" id="google-signin-btn" type="button">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-             width="18" height="18" alt="" />
-        Continue with Google
-      </button>
-
       <div class="auth-footer">
         Don't have an account?
-        <button type="button" class="btn btn-ghost" id="goto-signup"
-                style="display:inline;padding:0;font-size:inherit">Sign up</button>
+        <button type="button" class="btn btn-ghost" id="goto-signup" style="padding:0;color:var(--brand);font-weight:600">Create one</button>
       </div>
     </div>
 
-    <!-- ── Panel: SIGNUP ──────────────────────────────────── -->
+    <!-- ── SIGNUP PANEL ───────────────────────────────────── -->
     <div id="panel-signup" class="auth-panel">
-      <h2 style="text-align:center;margin-bottom:4px">Create account</h2>
-      <p style="text-align:center;margin-bottom:8px">Join Grouply — it's free</p>
+      <h2 style="text-align:center;margin-bottom:6px">Create account</h2>
+      <p style="text-align:center;margin-bottom:20px;font-size:0.88rem">Join Grouply to start sharing with groups</p>
+
+      <button class="btn btn-google btn-full" id="google-signup-btn" type="button" style="margin-bottom:12px">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+        </svg>
+        Sign up with Google
+      </button>
+
+      <div class="auth-divider">or sign up with email</div>
 
       <form id="signup-form" class="auth-form" novalidate>
         <div class="input-group">
           <label for="signup-name">Display name</label>
-          <input id="signup-name" type="text" class="input"
-                 placeholder="Your name" autocomplete="name" />
+          <input id="signup-name" type="text" class="input" placeholder="Your name" autocomplete="name" />
         </div>
 
         <div class="input-group">
-          <label for="signup-email">Email</label>
-          <input id="signup-email" type="email" class="input"
-                 placeholder="you@example.com" autocomplete="email" required />
+          <label for="signup-email">Email address</label>
+          <input id="signup-email" type="email" class="input" placeholder="name@example.com" autocomplete="email" required />
           <span class="form-error" id="signup-email-err"></span>
         </div>
 
         <div class="input-group">
           <label for="signup-password">Password</label>
           <div class="input-wrapper">
-            <input id="signup-password" type="password" class="input"
-                   placeholder="Min 8 characters" autocomplete="new-password" required />
-            <button type="button" class="input-icon" id="signup-pw-toggle"
-                    aria-label="Toggle password visibility">👁</button>
+            <input id="signup-password" type="password" class="input" placeholder="Minimum 8 characters" autocomplete="new-password" required />
+            <button type="button" class="input-icon" id="signup-pw-toggle" aria-label="Toggle password visibility">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
           <span class="form-error" id="signup-pw-err"></span>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full" id="signup-submit">
-          Create account
+          Create Account
         </button>
       </form>
 
-      <div class="divider">or</div>
-
-      <button class="btn btn-google btn-full" id="google-signup-btn" type="button">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-             width="18" height="18" alt="" />
-        Continue with Google
-      </button>
-
       <div class="auth-footer">
         Already have an account?
-        <button type="button" class="btn btn-ghost" id="goto-login"
-                style="display:inline;padding:0;font-size:inherit">Sign in</button>
+        <button type="button" class="btn btn-ghost" id="goto-login" style="padding:0;color:var(--brand);font-weight:600">Sign in</button>
       </div>
     </div>
 
-    <!-- ── Panel: FORGOT PASSWORD ─────────────────────────── -->
+    <!-- ── FORGOT PASSWORD PANEL ──────────────────────────── -->
     <div id="panel-forgot" class="auth-panel">
-      <button type="button" class="btn btn-ghost" id="forgot-back"
-              style="align-self:flex-start;padding:0;margin-bottom:4px">← Back</button>
-      <h2>Reset password</h2>
-      <p>Enter your email and we'll send you a reset link.</p>
+      <button type="button" class="btn btn-ghost" id="forgot-back" style="padding:0;margin-bottom:12px;font-size:0.85rem">
+        ← Back to sign in
+      </button>
+      <h2 style="margin-bottom:6px">Reset password</h2>
+      <p style="margin-bottom:20px;font-size:0.88rem">Enter your account email and we'll send you a password reset link.</p>
 
       <form id="forgot-form" class="auth-form" novalidate>
         <div class="input-group">
-          <label for="forgot-email">Email</label>
-          <input id="forgot-email" type="email" class="input"
-                 placeholder="you@example.com" autocomplete="email" required />
+          <label for="forgot-email">Email address</label>
+          <input id="forgot-email" type="email" class="input" placeholder="name@example.com" autocomplete="email" required />
           <span class="form-error" id="forgot-email-err"></span>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full" id="forgot-submit">
-          Send reset link
+          Send Reset Link
         </button>
       </form>
     </div>
 
-    <!-- ── Panel: RESET PASSWORD ──────────────────────────── -->
+    <!-- ── RESET PASSWORD PANEL ───────────────────────────── -->
     <div id="panel-reset" class="auth-panel">
-      <h2>Set new password</h2>
-      <p>Choose a new password for your account.</p>
+      <h2 style="margin-bottom:6px">Set new password</h2>
+      <p style="margin-bottom:20px;font-size:0.88rem">Choose a secure password for your account.</p>
 
       <form id="reset-form" class="auth-form" novalidate>
         <div class="input-group">
           <label for="reset-password">New password</label>
           <div class="input-wrapper">
-            <input id="reset-password" type="password" class="input"
-                   placeholder="Min 8 characters" autocomplete="new-password" required />
-            <button type="button" class="input-icon" id="reset-pw-toggle"
-                    aria-label="Toggle password visibility">👁</button>
+            <input id="reset-password" type="password" class="input" placeholder="Min 8 characters" autocomplete="new-password" required />
+            <button type="button" class="input-icon" id="reset-pw-toggle" aria-label="Toggle password visibility">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
           <span class="form-error" id="reset-pw-err"></span>
         </div>
 
         <div class="input-group">
-          <label for="reset-confirm">Confirm password</label>
-          <input id="reset-confirm" type="password" class="input"
-                 placeholder="Repeat password" autocomplete="new-password" required />
+          <label for="reset-confirm">Confirm new password</label>
+          <input id="reset-confirm" type="password" class="input" placeholder="Repeat new password" autocomplete="new-password" required />
           <span class="form-error" id="reset-confirm-err"></span>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full" id="reset-submit">
-          Update password
+          Update Password
         </button>
       </form>
     </div>
 
-  </div><!-- /auth-card -->
+  </div>
 </main>
 
-<!-- ── Scripts ────────────────────────────────────────────── -->
 <script type="module" src="js/login.js"></script>
 </body>
 </html>

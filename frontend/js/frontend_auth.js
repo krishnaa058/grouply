@@ -50,7 +50,7 @@ export async function signInWithGoogle(redirectTo) {
   return supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: redirectTo || `${window.location.origin}/`,
+      redirectTo: redirectTo || `${window.location.origin}/index.html`,
       queryParams: {
         access_type: "offline",
         prompt: "consent",

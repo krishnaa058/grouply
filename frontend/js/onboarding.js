@@ -11,7 +11,15 @@ const $ = (id) => document.getElementById(id);
 
 // ── Route guard ───────────────────────────────────────────────────────────────
 (async () => {
-  const session = await getSession();
+  let session = await getSession();
+  if (!session && window.location.hash.includes("access_token")) {
+    for (let i = 0; i < 5; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      session = await getSession();
+      if (session) break;
+    }
+  }
+
   if (!session) {
     window.location.href = "login.html";
     return;
@@ -130,7 +138,7 @@ function setLoading(loading) {
     btn.innerHTML = '<span class="spinner"></span>';
     btn.disabled = true;
   } else {
-    btn.textContent = btn.dataset.origText || "Let's go 🚀";
+    btn.textContent = btn.dataset.origText || "Continue to Grouply";
     btn.disabled = false;
   }
 }
