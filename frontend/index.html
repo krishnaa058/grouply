@@ -132,11 +132,22 @@
             </div>
             <div class="card-body" style="padding-top:0">
               <textarea id="feed-post-caption" class="input" placeholder="Share an update or memory with your group..." rows="2" style="resize:vertical;min-height:54px"></textarea>
-              <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;margin-top:var(--space-3)">
-                <input id="feed-post-media" type="url" class="input" placeholder="Media image/photo URL (optional)" style="flex:1;min-width:200px;font-size:0.85rem" />
-                <label style="display:flex;align-items:center;gap:var(--space-2);font-size:0.82rem;color:var(--text-secondary);cursor:pointer">
+              <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;margin-top:var(--space-3)">
+                <!-- Media preview thumbnail -->
+                <div id="feed-post-preview" style="display:none;position:relative;width:60px;height:60px;border-radius:var(--radius-md);overflow:hidden;background:var(--bg-secondary);flex-shrink:0">
+                  <img id="feed-post-preview-img" src="" alt="preview" style="width:100%;height:100%;object-fit:cover" />
+                  <button type="button" id="feed-post-clear-media" aria-label="Remove photo" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">&times;</button>
+                </div>
+                <!-- Hidden file input -->
+                <input type="file" id="feed-post-file" accept="image/*,video/*" style="display:none" />
+                <!-- Pick photo button -->
+                <button type="button" class="btn btn-ghost btn-sm" id="feed-post-media-btn" style="display:flex;align-items:center;gap:var(--space-1);color:var(--brand);font-weight:600">
+                  <span class="icon-wrap" data-icon="image"></span>
+                  <span>Add Photo</span>
+                </button>
+                <label style="display:flex;align-items:center;gap:var(--space-2);font-size:0.82rem;color:var(--text-secondary);cursor:pointer;margin-left:auto">
                   <input type="checkbox" id="feed-post-public" />
-                  <span>Public discovery</span>
+                  <span>Public</span>
                 </label>
                 <button class="btn btn-primary btn-sm" id="feed-post-submit">
                   <span class="icon-wrap" data-icon="send"></span>
@@ -439,8 +450,19 @@
         <div class="card" style="padding:var(--space-3);margin-bottom:var(--space-3)">
           <textarea id="gd-post-caption" class="input" placeholder="Share a memory or post to this circle..." rows="2" style="min-height:50px"></textarea>
           <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
-            <input id="gd-post-media" type="url" class="input" placeholder="Image/Media URL (optional)" style="flex:1;min-width:180px;font-size:0.85rem" />
-            <button class="btn btn-primary btn-sm" id="gd-post-submit">Post</button>
+            <!-- Media preview thumbnail -->
+            <div id="gd-post-preview" style="display:none;position:relative;width:52px;height:52px;border-radius:var(--radius-md);overflow:hidden;background:var(--bg-secondary);flex-shrink:0">
+              <img id="gd-post-preview-img" src="" alt="preview" style="width:100%;height:100%;object-fit:cover" />
+              <button type="button" id="gd-post-clear-media" aria-label="Remove photo" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">&times;</button>
+            </div>
+            <!-- Hidden file input -->
+            <input type="file" id="gd-post-file" accept="image/*,video/*" style="display:none" />
+            <!-- Pick photo button -->
+            <button type="button" class="btn btn-ghost btn-sm" id="gd-post-media-btn" style="display:flex;align-items:center;gap:var(--space-1);color:var(--brand);font-weight:600">
+              <span class="icon-wrap" data-icon="image"></span>
+              <span>Add Photo</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="gd-post-submit" style="margin-left:auto">Post</button>
           </div>
         </div>
         <div id="gd-feed-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
@@ -1013,6 +1035,51 @@
         </div>
         <div id="up-groups-list" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: ADD ARCHIVE ITEM
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="add-archive-modal" role="dialog" aria-modal="true" aria-label="Add Archive Item">
+  <div class="bottom-sheet" style="max-width:480px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Add to Archive</span>
+      <button class="sheet-close" id="add-archive-close" aria-label="Close">
+        <span class="icon-wrap" data-icon="x"></span>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="add-archive-alert" class="alert" role="alert" aria-live="polite"></div>
+
+      <div class="input-group">
+        <label for="archive-title">Title <span style="color:var(--danger)">*</span></label>
+        <input id="archive-title" type="text" class="input" placeholder="e.g. Beach Day, Trip Map, Group Photo" maxlength="80" required />
+      </div>
+
+      <div class="input-group">
+        <label>Photo / File</label>
+        <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);background:var(--bg-secondary);border-radius:var(--radius-md);border:1px dashed var(--border-color)">
+          <div id="archive-file-preview" style="display:none;width:72px;height:72px;border-radius:var(--radius-md);overflow:hidden;background:var(--bg-card);flex-shrink:0">
+            <img id="archive-file-preview-img" src="" alt="preview" style="width:100%;height:100%;object-fit:cover" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+            <button type="button" class="btn btn-secondary btn-sm" id="archive-pick-file-btn" style="display:flex;align-items:center;gap:var(--space-2)">
+              <span class="icon-wrap" data-icon="upload"></span>
+              <span>Choose File</span>
+            </button>
+            <span id="archive-file-name" style="font-size:0.78rem;color:var(--text-secondary);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">No file chosen</span>
+          </div>
+        </div>
+        <input type="file" id="archive-file-input" accept="image/*,video/*,application/pdf,.zip,.doc,.docx,.xls,.xlsx" style="display:none" />
+      </div>
+
+      <button class="btn btn-primary btn-full" id="add-archive-submit" style="margin-top:var(--space-3)">
+        <span class="icon-wrap" data-icon="plus"></span>
+        <span>Add to Archive</span>
+      </button>
     </div>
   </div>
 </div>

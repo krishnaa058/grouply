@@ -78,6 +78,15 @@ async function handlePostAuth() {
   const hash = window.location.hash;
   if (hash.includes("access_token")) {
     showAlert("Completing Google sign-in…", "info");
+    // Wait for Supabase-js to parse the hash and write the session to storage
+    for (let i = 0; i < 15; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      const s = await getSession();
+      if (s) {
+        await handlePostAuth();
+        return;
+      }
+    }
   }
 
   const session = await getSession();
@@ -88,8 +97,6 @@ async function handlePostAuth() {
 
   // Check if this is a password-reset redirect (Supabase adds #type=recovery)
   if (hash.includes("type=recovery") || hash.includes("type=signup")) {
-    // supabase-js v2 detects session from URL hash automatically
-    // Wait briefly for it to settle
     setTimeout(async () => {
       const s = await getSession();
       if (s && hash.includes("type=recovery")) {
@@ -101,7 +108,7 @@ async function handlePostAuth() {
 
 // React to auth state changes (e.g. OAuth redirect lands here)
 onAuthStateChange(async (event, session) => {
-  if (event === "SIGNED_IN" && session) {
+  if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
     await handlePostAuth();
   }
   if (event === "PASSWORD_RECOVERY") {

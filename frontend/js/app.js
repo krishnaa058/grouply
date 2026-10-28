@@ -84,6 +84,39 @@ function processAvatarFile(file, onDone) {
   reader.readAsDataURL(file);
 }
 
+/**
+ * Compress an image File to a data URL (landscape-safe, max 1080px).
+ * Videos and non-image files are read as raw data URLs.
+ */
+function compressMediaFile(file, onDone) {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    // For video / docs: just return object URL (not stored as dataURL — too large)
+    onDone(URL.createObjectURL(file), file.name);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1080;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      onDone(canvas.toDataURL("image/jpeg", 0.85), file.name);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function getInitial(name) {
   return (name || "?")[0].toUpperCase();
 }
@@ -124,6 +157,12 @@ let activeGroupId  = null;
 let activeGroupData= null;
 let activePostId   = null; // For comments modal
 
+// ── Media Picker State ────────────────────────────────────────────────────────
+let feedPostMediaData  = ""; // data URL or object URL for feed post
+let gdPostMediaData    = ""; // data URL or object URL for group post
+let archiveFileData    = ""; // data URL or object URL for archive item
+let archiveFileName    = ""; // original filename for archive item
+
 // ── Theme Management ──────────────────────────────────────────────────────────
 function initTheme() {
   const saved = localStorage.getItem("grouply_theme");
@@ -161,13 +200,16 @@ function toggleTheme() {
 }
 
 // ── Route Guard & Boot ────────────────────────────────────────────────────────
+let appLoaded = false;
+
 (async () => {
   initTheme();
   renderIcons();
 
   let session = await getSession();
   if (!session && window.location.hash.includes("access_token")) {
-    for (let i = 0; i < 5; i++) {
+    // Supabase is parsing OAuth redirect URL hash; allow sufficient time
+    for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 200));
       session = await getSession();
       if (session) break;
@@ -179,7 +221,14 @@ function toggleTheme() {
     return;
   }
 
+  // Clean URL hash so OAuth parameters don't clutter the address bar
+  if (window.location.hash.includes("access_token")) {
+    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+  }
+
   currentUser = session.user;
+  appLoaded = true;
+
   await loadProfile();
   await loadMyGroups();
   await loadFeed();
@@ -189,7 +238,7 @@ function toggleTheme() {
 })();
 
 onAuthStateChange(async (event, session) => {
-  if (event === "SIGNED_OUT") {
+  if (event === "SIGNED_OUT" && appLoaded) {
     window.location.href = "login.html";
     return;
   }
@@ -202,26 +251,20 @@ onAuthStateChange(async (event, session) => {
 async function loadProfile() {
   try {
     currentProfile = await callApiJson("/api/me");
-    if (!currentProfile.display_name) {
+    if (!currentProfile.display_name && !currentProfile.username) {
       window.location.href = "onboarding.html";
       return;
     }
     renderUserProfile(currentProfile);
   } catch (err) {
-    console.warn("Could not load profile from API:", err);
-    if (err?.status === 401) {
-      const activeSession = await getSession();
-      if (!activeSession) {
-        window.location.href = "login.html";
-        return;
-      }
-    }
+    console.warn("Could not load profile from API, falling back to local session data:", err);
     const meta = currentUser?.user_metadata || {};
     currentProfile = {
-      display_name: meta.full_name || meta.name || currentUser?.email || "User",
-      username: meta.preferred_username || "user",
+      id: currentUser?.id,
+      username: meta.preferred_username || (currentUser?.email ? currentUser.email.split("@")[0] : "user"),
+      display_name: meta.full_name || meta.name || (currentUser?.email ? currentUser.email.split("@")[0] : "Grouply Member"),
       avatar_url: meta.avatar_url || meta.picture || null,
-      bio: "",
+      bio: "Hey there! I am using Grouply.",
     };
     renderUserProfile(currentProfile);
   }
@@ -513,18 +556,38 @@ function buildPostCard(p) {
 }
 
 // Post creation in feed
+// ── Feed Media Picker ─────────────────────────────────────────────────────────
+$('feed-post-media-btn').addEventListener('click', () => $('feed-post-file').click());
+$('feed-post-file').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  compressMediaFile(file, (dataUrl) => {
+    feedPostMediaData = dataUrl;
+    $('feed-post-preview-img').src = file.type.startsWith('image/') ? dataUrl : '';
+    $('feed-post-preview').style.display = 'block';
+    if (!file.type.startsWith('image/')) {
+      $('feed-post-preview').innerHTML = `<span style="font-size:0.7rem;padding:4px;word-break:break-all;color:var(--text-secondary)">${escHtml(file.name)}</span>`;
+    }
+  });
+});
+$('feed-post-clear-media').addEventListener('click', () => {
+  feedPostMediaData = '';
+  $('feed-post-file').value = '';
+  $('feed-post-preview').style.display = 'none';
+  $('feed-post-preview-img').src = '';
+});
+
 $("feed-post-submit").addEventListener("click", async () => {
   const groupId = $("feed-post-group-select").value;
   const caption = $("feed-post-caption").value.trim();
-  const mediaUrl = $("feed-post-media").value.trim();
   const isPublic = $("feed-post-public").checked;
 
   if (!groupId) {
     alert("Please select a group to post to.");
     return;
   }
-  if (!caption && !mediaUrl) {
-    alert("Please enter a caption or an image URL.");
+  if (!caption && !feedPostMediaData) {
+    alert("Please enter a caption or add a photo.");
     return;
   }
 
@@ -532,11 +595,14 @@ $("feed-post-submit").addEventListener("click", async () => {
   try {
     await callApiJson(`/api/groups/${groupId}/posts`, {
       method: "POST",
-      body: { caption: caption || null, media_url: mediaUrl || null, is_public: isPublic },
+      body: { caption: caption || null, media_url: feedPostMediaData || null, is_public: isPublic },
     });
 
     $("feed-post-caption").value = "";
-    $("feed-post-media").value = "";
+    feedPostMediaData = "";
+    $("feed-post-file").value = "";
+    $("feed-post-preview").style.display = "none";
+    $("feed-post-preview-img").src = "";
     $("feed-post-public").checked = false;
 
     await loadFeed();
@@ -789,12 +855,32 @@ async function loadGroupFeed(groupId) {
   }
 }
 
+// ── Group Post Media Picker ────────────────────────────────────────────────────
+$('gd-post-media-btn').addEventListener('click', () => $('gd-post-file').click());
+$('gd-post-file').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  compressMediaFile(file, (dataUrl) => {
+    gdPostMediaData = dataUrl;
+    $('gd-post-preview-img').src = file.type.startsWith('image/') ? dataUrl : '';
+    $('gd-post-preview').style.display = 'block';
+    if (!file.type.startsWith('image/')) {
+      $('gd-post-preview').innerHTML = `<span style="font-size:0.65rem;padding:4px;word-break:break-all;color:var(--text-secondary)">${escHtml(file.name)}</span>`;
+    }
+  });
+});
+$('gd-post-clear-media').addEventListener('click', () => {
+  gdPostMediaData = '';
+  $('gd-post-file').value = '';
+  $('gd-post-preview').style.display = 'none';
+  $('gd-post-preview-img').src = '';
+});
+
 $("gd-post-submit").addEventListener("click", async () => {
   if (!activeGroupId) return;
   const caption = $("gd-post-caption").value.trim();
-  const mediaUrl = $("gd-post-media").value.trim();
-  if (!caption && !mediaUrl) {
-    alert("Please enter a caption or media URL.");
+  if (!caption && !gdPostMediaData) {
+    alert("Please enter a caption or add a photo.");
     return;
   }
 
@@ -802,10 +888,13 @@ $("gd-post-submit").addEventListener("click", async () => {
   try {
     await callApiJson(`/api/groups/${activeGroupId}/posts`, {
       method: "POST",
-      body: { caption: caption || null, media_url: mediaUrl || null, is_public: false },
+      body: { caption: caption || null, media_url: gdPostMediaData || null, is_public: false },
     });
     $("gd-post-caption").value = "";
-    $("gd-post-media").value = "";
+    gdPostMediaData = "";
+    $("gd-post-file").value = "";
+    $("gd-post-preview").style.display = "none";
+    $("gd-post-preview-img").src = "";
     await loadGroupFeed(activeGroupId);
   } catch (err) {
     alert(err.message || "Failed to post.");
@@ -1882,4 +1971,77 @@ $("profile-theme-btn").addEventListener("click", toggleTheme);
 // ── Sign Out ──────────────────────────────────────────────────────────────────
 $("signout-btn").addEventListener("click", async () => {
   await signOut();
+});
+
+// ── Archive Add Item (with media picker) ──────────────────────────────────────
+$("gd-add-archive-btn").addEventListener("click", () => {
+  archiveFileData = "";
+  archiveFileName = "";
+  $("archive-title").value = "";
+  $("archive-file-input").value = "";
+  $("archive-file-preview").style.display = "none";
+  $("archive-file-preview-img").src = "";
+  $("archive-file-name").textContent = "No file chosen";
+  const al = $("add-archive-alert");
+  al.textContent = "";
+  al.className = "alert";
+  $("add-archive-modal").classList.add("open");
+  renderIcons();
+});
+
+$("add-archive-close").addEventListener("click", () => $("add-archive-modal").classList.remove("open"));
+$("add-archive-modal").addEventListener("click", (e) => {
+  if (e.target === $("add-archive-modal")) $("add-archive-modal").classList.remove("open");
+});
+
+$("archive-pick-file-btn").addEventListener("click", () => $("archive-file-input").click());
+$("archive-file-input").addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  archiveFileName = file.name;
+  $("archive-file-name").textContent = file.name;
+  if (file.type.startsWith("image/")) {
+    compressMediaFile(file, (dataUrl) => {
+      archiveFileData = dataUrl;
+      $("archive-file-preview-img").src = dataUrl;
+      $("archive-file-preview").style.display = "block";
+    });
+  } else {
+    // Non-image: store as object URL; preview as file name
+    archiveFileData = URL.createObjectURL(file);
+    $("archive-file-preview").style.display = "none";
+  }
+});
+
+$("add-archive-submit").addEventListener("click", async () => {
+  if (!activeGroupId) return;
+  const title = $("archive-title").value.trim();
+  const al = $("add-archive-alert");
+
+  if (!title) {
+    al.textContent = "Please enter a title for this archive item.";
+    al.className = "alert alert-error show";
+    return;
+  }
+
+  setLoading("add-archive-submit", true);
+  try {
+    await callApiJson(`/api/groups/${activeGroupId}/archive`, {
+      method: "POST",
+      body: {
+        title,
+        file_url: archiveFileData || null,
+        file_name: archiveFileName || null,
+      },
+    });
+    $("add-archive-modal").classList.remove("open");
+    archiveFileData = "";
+    archiveFileName = "";
+    await loadGroupArchive(activeGroupId);
+  } catch (err) {
+    al.textContent = err.message || "Failed to add archive item.";
+    al.className = "alert alert-error show";
+  }
+  setLoading("add-archive-submit", false, "<span class=\"icon-wrap\" data-icon=\"plus\"></span><span>Add to Archive</span>");
+  renderIcons();
 });
