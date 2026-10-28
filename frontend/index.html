@@ -13,7 +13,9 @@
     window.GROUPLY_CONFIG = {
       SUPABASE_URL:     "REPLACE_WITH_YOUR_SUPABASE_URL",
       SUPABASE_ANON_KEY:"REPLACE_WITH_YOUR_SUPABASE_ANON_KEY",
-      API_BASE_URL:     "http://localhost:5000",
+      API_BASE_URL:     window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+                          ? "http://localhost:5000"
+                          : "https://grouply-backend.onrender.com",
     };
   </script>
 </head>

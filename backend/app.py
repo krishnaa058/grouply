@@ -67,6 +67,15 @@ def _get_role(db, group_id: str, user_id: str):
 # HEALTH
 # ════════════════════════════════════════════════════════════
 
+@app.route("/")
+def index():
+    return jsonify({
+        "service": "grouply-backend",
+        "status": "online",
+        "message": "Grouply API is running. Access the frontend app to use Grouply."
+    })
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok", "service": "grouply-backend"})
